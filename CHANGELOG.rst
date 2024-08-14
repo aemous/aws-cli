@@ -2,6 +2,61 @@
 CHANGELOG
 =========
 
+1.33.42
+=======
+
+* api-change:``amplify``: Add a new field "cacheConfig" that enables users to configure the CDN cache settings for an App
+* api-change:``appstream``: This release includes following new APIs: CreateThemeForStack, DescribeThemeForStack, UpdateThemeForStack, DeleteThemeForStack to support custom branding programmatically.
+* api-change:``fis``: This release adds support for additional error information on experiment failure. It adds the error code, location, and account id on relevant failures to the GetExperiment and ListExperiment API responses.
+* api-change:``glue``: Add AttributesToGet parameter support for Glue GetTables
+* api-change:``neptune-graph``: Amazon Neptune Analytics provides a new option for customers to load data into a graph using the RDF (Resource Description Framework) NTRIPLES format. When loading NTRIPLES files, use the value `convertToIri` for the `blankNodeHandling` parameter.
+
+
+1.33.41
+=======
+
+* api-change:``compute-optimizer``: Doc only update for Compute Optimizer that fixes several customer-reported issues relating to ECS finding classifications
+* api-change:``config``: Documentation update for the OrganizationConfigRuleName regex pattern.
+* api-change:``ec2``: This release adds new capabilities to manage On-Demand Capacity Reservations including the ability to split your reservation, move capacity between reservations, and modify the instance eligibility of your reservation.
+* api-change:``eks``: Added support for new AL2023 GPU AMIs to the supported AMITypes.
+* api-change:``groundstation``: Updating documentation for OEMEphemeris to link to AWS Ground Station User Guide
+* api-change:``medialive``: AWS Elemental MediaLive now supports now supports editing the PID values for a Multiplex.
+* api-change:``sagemaker``: Releasing large data support as part of CreateAutoMLJobV2 in SageMaker Autopilot and CreateDomain API for SageMaker Canvas.
+
+
+1.33.40
+=======
+
+* api-change:``cognito-idp``: Fixed a description of AdvancedSecurityAdditionalFlows in Amazon Cognito user pool configuration.
+* api-change:``connect``: This release supports adding RoutingCriteria via UpdateContactRoutingData public API.
+* api-change:``ssm``: Systems Manager doc-only updates for August 2024.
+
+
+1.33.39
+=======
+
+* api-change:``cognito-idp``: Added support for threat protection for custom authentication in Amazon Cognito user pools.
+* api-change:``connect``: This release fixes a regression in number of access control tags that are allowed to be added to a security profile in Amazon Connect. You can now add up to four access control tags on a single security profile.
+* api-change:``ec2``: Launch of private IPv6 addressing for VPCs and Subnets. VPC IPAM supports the planning and monitoring of private IPv6 usage.
+* api-change:``glue``: This release adds support to retrieve the validation status when creating or updating Glue Data Catalog Views. Also added is support for BasicCatalogTarget partition keys.
+
+
+1.33.38
+=======
+
+* api-change:``appintegrations``: Updated CreateDataIntegration and CreateDataIntegrationAssociation API to support bulk data export from Amazon Connect Customer Profiles to the customer S3 bucket.
+* api-change:``glue``: Introducing AWS Glue Data Quality anomaly detection, a new functionality that uses ML-based solutions to detect data anomalies users have not explicitly defined rules for.
+
+
+1.33.37
+=======
+
+* api-change:``bedrock-agent-runtime``: Introduce model invocation output traces for orchestration traces, which contain the model's raw response and usage.
+* api-change:``cognito-idp``: Advanced security feature updates to include password history and log export for Cognito user pools.
+* api-change:``cost-optimization-hub``: This release adds savings percentage support to the ListRecommendationSummaries API.
+* api-change:``workspaces``: Added support for BYOL_GRAPHICS_G4DN_WSP IngestionProcess
+
+
 1.33.36
 =======
 
