@@ -13,12 +13,11 @@
 import pytest
 import signal
 
+import awscli.paramfile
 from awscli import shorthand
-from awscli.testutils import unittest, skip_if_windows
-
+from awscli.testutils import FileCreator, skip_if_windows, unittest
 
 from botocore import model
-
 
 PARSING_TEST_CASES = (
     # Key val pairs with scalar value.
@@ -129,6 +128,24 @@ PARSING_TEST_CASES = (
         'Name=[{foo=[a,b]}, {bar=[c,d]}]',
         {'Name': [{'foo': ['a', 'b']}, {'bar': ['c', 'd']}]}
     ),
+    # key-value pairs using @= syntax
+    ('foo@=bar', {'foo': 'bar'}),
+    ('foo@=bar,baz@=qux', {'foo': 'bar', 'baz': 'qux'}),
+    ('foo@=,bar@=', {'foo': '', 'bar': ''}),
+    (u'foo@=\u2713,\u2713', {'foo': [u'\u2713', u'\u2713']}),
+    ('foo@=a,b,bar=c,d', {'foo': ['a', 'b'], 'bar': ['c', 'd']}),
+    ('foo=a,b@=with space', {'foo': 'a', 'b': 'with space'}),
+    ('foo=a,b@=with trailing space  ', {'foo': 'a', 'b': 'with trailing space'}),
+    ('aws:service:region:124:foo/bar@=baz', {'aws:service:region:124:foo/bar': 'baz'}),
+    ('foo=[a,b],bar@=[c,d]', {'foo': ['a', 'b'], 'bar': ['c', 'd']}),
+    ('foo  @=  [ a , b  , c  ]', {'foo': ['a', 'b', 'c']}),
+    ('A=b,\nC@=d,\nE@=f\n', {'A': 'b', 'C': 'd', 'E': 'f'}),
+    ('Bar@=baz,Name={foo@=bar}', {'Bar': 'baz', 'Name': {'foo': 'bar'}}),
+    ('Name=[{foo@=bar}, {baz=qux}]', {'Name': [{'foo': 'bar'}, {'baz': 'qux'}]}),
+    (
+        'Name=[{foo@=[a,b]}, {bar=[c,d]}]',
+        {'Name': [{'foo': ['a', 'b']}, {'bar': ['c', 'd']}]}
+    ),
 )
 
 
@@ -137,6 +154,7 @@ PARSING_TEST_CASES = (
         'foo',
         # Missing closing quotes
         'foo="bar',
+        '"foo=bar',
         "foo='bar",
         "foo=[bar",
         "foo={bar",
@@ -183,6 +201,56 @@ def handle_timeout(signum, frame):
 def test_parse(data, expected):
     actual = shorthand.ShorthandParser().parse(data)
     assert actual == expected
+
+class TestShorthandParserParamFile:
+    @pytest.fixture()
+    def files(self):
+        files = FileCreator()
+        yield files
+        files.remove_all()
+
+    @pytest.mark.parametrize(
+        'file_contents, data, expected',
+        (
+            ('file-contents123', 'Foo@=file://{0},Bar={{Baz@=file://{0}}}', {'Foo': 'file-contents123', 'Bar': {'Baz': 'file-contents123'}}),
+            (b'file-contents123', 'Foo@=fileb://{0},Bar={{Baz@=fileb://{0}}}', {'Foo': b'file-contents123', 'Bar': {'Baz': b'file-contents123'}}),
+            ('file-contents123', 'Bar@={{Baz=file://{0}}}', {'Bar': {'Baz': 'file://{0}'}}),
+            ('file-contents123', 'Foo@={0},Bar={{Baz@={0}}}', {'Foo': '{0}', 'Bar': {'Baz': '{0}'}})
+        )
+    )
+    def test_paramfile(self, files, file_contents, data, expected):
+        is_binary = isinstance(file_contents, bytes)
+        mode = 'wb' if is_binary else 'w'
+        filename = files.create_file('foo', contents=file_contents, mode=mode)
+        result = shorthand.ShorthandParser().parse(data.format(filename))
+        # traverse the dictionary up to 2-levels deep, formatting values with the file path
+        for (key, value) in expected.items():
+            if isinstance(value, dict):
+                # value is a nested dictionary / hash literal
+                for (key2, value2) in value.items():
+                    # if it's a binary-encoded string, it must contain the raw file contents.
+                    if not isinstance(value2, bytes):
+                        value[key2] = value2.format(filename)
+            elif not isinstance(value, bytes):
+                expected[key] = value.format(filename)
+
+        assert result == expected
+
+    def test_paramfile_list(self, files):
+        f1_contents = 'file-contents123'
+        f2_contents = 'contents2'
+        f1_name = files.create_file('foo', f1_contents)
+        f2_name = files.create_file('bar', f2_contents)
+        result = shorthand.ShorthandParser().parse(
+            f'Foo@=[a, file://{f1_name}, file://{f2_name}]'
+        )
+        assert result == {'Foo': ['a', f1_contents, f2_contents]}
+
+    def test_paramfile_does_not_exist_error(self, capsys):
+        with pytest.raises(awscli.paramfile.ResourceLoadingError):
+            shorthand.ShorthandParser().parse('Foo@=file://fakefile.txt')
+            captured = capsys.readouterr()
+            assert "No such file or directory: 'fakefile.txt" in captured.err
 
 
 class TestModelVisitor(unittest.TestCase):
