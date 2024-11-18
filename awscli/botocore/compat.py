@@ -289,6 +289,17 @@ def get_tzinfo_options():
         return (tzlocal,)
 
 
+# Detect if CRT is available for use
+try:
+    import awscrt.auth
+
+    # Allow user opt-out if needed
+    disabled = os.environ.get('BOTO_DISABLE_CRT', "false")
+    HAS_CRT = not disabled.lower() == 'true'
+except ImportError:
+    HAS_CRT = False
+
+
 ########################################################
 #              urllib3 compat backports                #
 ########################################################

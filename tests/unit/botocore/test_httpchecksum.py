@@ -17,8 +17,12 @@ from tests import mock
 
 from botocore.awsrequest import AWSResponse
 from botocore.model import OperationModel
-from botocore.exceptions import AwsChunkedWrapperError
-from botocore.exceptions import FlexibleChecksumError
+from botocore.compat import HAS_CRT
+from botocore.exceptions import (
+    AwsChunkedWrapperError,
+    FlexibleChecksumError,
+    MissingDependencyException,
+)
 from botocore.httpchecksum import AwsChunkedWrapper
 from botocore.httpchecksum import StreamingChecksumBody
 from botocore.httpchecksum import (
@@ -164,7 +168,7 @@ class TestHttpChecksumHandlers(unittest.TestCase):
         operation_model = self._make_operation_model(
             http_checksum={"requestAlgorithmMember": "Algorithm"},
         )
-        params = {"Algorithm": "crc32"}
+        params = {"Algorithm": "sha256"}
 
         with self.assertRaises(FlexibleChecksumError):
             resolve_request_checksum_algorithm(
