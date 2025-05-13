@@ -577,6 +577,45 @@ class TestSyncCommand(BaseS3TransferCommandTest):
             ]
         )
 
+    def test_upload_no_create_does_not_create(self):
+        # when there's 2 files in the local dir
+        self.files.create_file('foo.txt', 'contents')
+        self.files.create_file('bar.txt', 'contents')
+        # when the destination bucket has 1 of the 2 files
+        self.parsed_responses = [
+            self.list_objects_response(['foo.txt']),
+            self.put_object_response("etag-123")
+        ]
+        cmdline = f'{self.prefix} {self.files.rootdir} s3://bucket --no-create'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # only the present file should be uploaded
+        self.assert_operations_called(
+            [
+                self.list_objects_request('bucket'),
+                self.put_object_request('bucket', 'foo.txt', ContentType='text/plain'),
+            ]
+        )
+
+    def test_download_no_create_does_not_create(self):
+        # when the source bucket has 2 files
+        self.parsed_responses = [
+            self.list_objects_response(['foo', 'bar']),
+            self.get_object_response(),
+        ]
+        # when the local destination has 1 of the 2 files
+        self.files.create_file('foo', 'contents')
+        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-create'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # only the present file should be downloaded
+        self.assert_operations_called(
+            [
+                self.list_objects_request('bucket'),
+                self.get_object_request('bucket', 'foo'),
+            ]
+        )
+
 
 class TestSyncSourceRegion(BaseS3CLIRunnerTest):
     def test_respects_source_region(self):

@@ -52,4 +52,7 @@ def register_sync_strategies(command_table, session, **kwargs):
     # Register the never sync strategy for when file already exists at destination.
     register_sync_strategy(session, NeverSync, 'file_at_src_and_dest')
 
+    # Register the never sync strategy for when the file does not exist at destination.
+    register_sync_strategy(session, NeverSync, 'file_not_at_dest')
+
     # Register additional sync strategies here...

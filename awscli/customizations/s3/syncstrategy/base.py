@@ -13,7 +13,7 @@
 import logging
 
 from awscli.customizations.exceptions import ParamValidationError
-from awscli.customizations.s3.subcommands import NO_OVERWRITE
+from awscli.customizations.s3.argumentschema import NO_CREATE, NO_OVERWRITE
 
 LOG = logging.getLogger(__name__)
 
@@ -250,7 +250,8 @@ class SizeAndLastModifiedSync(BaseSync):
 
 class NeverSync(BaseSync):
     ARGUMENTS = {
-        'file_at_src_and_dest': NO_OVERWRITE
+        'file_at_src_and_dest': NO_OVERWRITE,
+        'file_not_at_dest': NO_CREATE,
     }
 
     def __init__(self, sync_type='file_not_at_src'):
