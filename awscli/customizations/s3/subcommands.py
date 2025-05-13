@@ -642,6 +642,22 @@ BUCKET_REGION = {
     ),
 }
 
+NO_OVERWRITE = {
+    'name': 'no-overwrite',
+    'action': 'store_true',
+    'help_text': (
+        'Will not overwrite any file(s) in the destination.'
+    ),
+}
+
+NO_CREATE = {
+    'name': 'no-create',
+    'action': 'store_true',
+    'help_text': (
+        'Will not create any new file(s) in the destination.'
+    ),
+}
+
 TRANSFER_ARGS = [
     DRYRUN,
     QUIET,
@@ -1057,7 +1073,15 @@ class CpCommand(S3TransferCommand):
             }
         ]
         + TRANSFER_ARGS
-        + [METADATA, COPY_PROPS, METADATA_DIRECTIVE, EXPECTED_SIZE, RECURSIVE]
+        + [
+            METADATA,
+            COPY_PROPS,
+            METADATA_DIRECTIVE,
+            EXPECTED_SIZE,
+            RECURSIVE,
+            NO_OVERWRITE,
+            NO_CREATE,
+        ]
     )
 
 
@@ -1081,6 +1105,8 @@ class MvCommand(S3TransferCommand):
             METADATA_DIRECTIVE,
             RECURSIVE,
             VALIDATE_SAME_S3_PATHS,
+            NO_OVERWRITE,
+            NO_CREATE,
         ]
     )
 
@@ -1126,7 +1152,7 @@ class SyncCommand(S3TransferCommand):
             }
         ]
         + TRANSFER_ARGS
-        + [METADATA, COPY_PROPS, METADATA_DIRECTIVE]
+        + [METADATA, COPY_PROPS, METADATA_DIRECTIVE, NO_OVERWRITE, NO_CREATE]
     )
 
 
@@ -1586,6 +1612,14 @@ class CommandParameters:
             self.parameters['is_stream'] = True
             self.parameters['dir_op'] = False
             self.parameters['only_show_errors'] = True
+        if self.cmd == 'cp' and self.parameters['dest'] == '-':
+            self._raise_param_incompatible_for_streaming_cp_download(
+                self.parameters,
+                [
+                    NO_OVERWRITE['name'],
+                    NO_CREATE['name'],
+                ]
+            )
 
     def _validate_path_args(self):
         # If we're using a mv command, you can't copy the object onto itself.
@@ -1714,6 +1748,18 @@ class CommandParameters:
                 f"Expected {param} parameter to be used with one of following path formats: "
                 f"{', '.join([expected_usage_map[path] for path in allowed_paths])}. Instead, received {expected_usage_map[paths_type]}."
             )
+
+    def _raise_param_incompatible_for_streaming_cp_download(
+            self,
+            params,
+            incompatible_params
+    ):
+        for p in incompatible_params:
+            if params.get(p.replace('-', '_')):
+                raise ParamValidationError(
+                    f"The {p} parameter is not compatible with streaming "
+                    "cp downloads"
+                )
 
     def _normalize_s3_trailing_slash(self, paths):
         for i, path in enumerate(paths):

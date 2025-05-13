@@ -870,6 +870,24 @@ class TestCPCommand(BaseCPCommandTest):
             stderr,
         )
 
+    def test_cannot_use_no_overwrite_with_stream_download(self):
+        cmdline = '%s s3://bucket/key.txt - --no-overwrite' % self.prefix
+        _, stderr, _ = self.run_cmd(cmdline, expected_rc=252)
+        self.assertIn(
+            'The no-overwrite parameter is not '
+            'compatible with streaming cp downloads',
+            stderr,
+        )
+
+    def test_cannot_use_no_create_with_stream_download(self):
+        cmdline = '%s s3://bucket/key.txt - --no-create' % self.prefix
+        _, stderr, _ = self.run_cmd(cmdline, expected_rc=252)
+        self.assertIn(
+            'The no-create parameter is not '
+            'compatible with streaming cp downloads',
+            stderr,
+        )
+
     def test_upload_unicode_path(self):
         self.parsed_responses = [
             {'ContentLength': 10, 'LastModified': '00:00:00Z'},  # HeadObject
