@@ -28,7 +28,9 @@ SIZE_ONLY = {
 
 
 class SizeOnlySync(BaseSync):
-    ARGUMENT = SIZE_ONLY
+    ARGUMENTS = {
+        'file_at_src_and_dest': SIZE_ONLY,
+    }
 
     def determine_should_sync(self, src_file, dest_file):
         same_size = self.compare_size(src_file, dest_file)

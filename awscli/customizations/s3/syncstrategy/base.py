@@ -31,20 +31,22 @@ class BaseSync:
 
     # This is the argument that will be added to the ``SyncCommand`` arg table.
     # This argument will represent the sync strategy when the arguments for
-    # the sync command are parsed.  ``ARGUMENT`` follows the same format as
+    # the sync command are parsed.  ``ARGUMENTS`` follows the same format as
     # a member of ``ARG_TABLE`` in ``BasicCommand`` class as specified in
     # ``awscli/customizations/commands.py``.
     #
-    # For example, if I wanted to perform the sync strategy whenever I type
-    # ``--my-sync-strategy``, I would say:
+    # For example, if I wanted to perform the sync strategy for the
+    # sync type ``sync_type`` whenever I type ``--my-sync-strategy``,
+    # I would say:
     #
-    # ARGUMENT =
-    #     {'name': 'my-sync-strategy', 'action': 'store-true',
-    #      'help_text': 'Performs my sync strategy'}
+    # ARGUMENTS = {
+    #     sync_type: {'name': 'my-sync-strategy', 'action': 'store-true',
+    #                  'help_text': 'Performs my sync strategy'}
+    # }
     #
     # Typically, the argument's ``action`` should ``store_true`` to
     # minimize amount of extra code in making a custom sync strategy.
-    ARGUMENT = None
+    ARGUMENTS = None
 
     # At this point all that need to be done is implement
     # ``determine_should_sync`` method (see method for more information).
@@ -81,7 +83,7 @@ class BaseSync:
     def register_strategy(self, session):
         """Registers the sync strategy class to the given session."""
 
-        session.register('building-arg-table.s3_sync', self.add_sync_argument)
+        session.register('building-arg-table.s3_sync', self.add_sync_arguments)
         session.register('choosing-s3-sync-strategy', self.use_sync_strategy)
 
     def determine_should_sync(self, src_file, dest_file):
@@ -124,25 +126,25 @@ class BaseSync:
 
     @property
     def arg_name(self):
-        # Retrieves the ``name`` of the sync strategy's ``ARGUMENT``.
+        # Retrieves the ``name`` of the sync strategy's active argument.
         name = None
-        if self.ARGUMENT is not None:
-            name = self.ARGUMENT.get('name', None)
+        if self.ARGUMENTS is not None:
+            name = self.ARGUMENTS.get(self._sync_type, {}).get('name', None)
         return name
 
     @property
     def arg_dest(self):
-        # Retrieves the ``dest`` of the sync strategy's ``ARGUMENT``.
+        # Retrieves the ``dest`` of the sync strategy's active argument.
         dest = None
-        if self.ARGUMENT is not None:
-            dest = self.ARGUMENT.get('dest', None)
+        if self.ARGUMENTS is not None:
+            dest = self.ARGUMENTS.get(self._sync_type, {}).get('dest', None)
         return dest
 
-    def add_sync_argument(self, arg_table, **kwargs):
-        # This function adds sync strategy's argument to the ``SyncCommand``
-        # argument table.
-        if self.ARGUMENT is not None:
-            arg_table.append(self.ARGUMENT)
+    def add_sync_arguments(self, arg_table, **kwargs):
+        # This function adds the sync strategy's arguments to the
+        # ``SyncCommand`` argument table.
+        if self.ARGUMENTS is not None:
+            arg_table.extend(self.ARGUMENTS.values())
 
     def use_sync_strategy(self, params, **kwargs):
         # This function determines which sync strategy the ``SyncCommand`` will
@@ -152,25 +154,25 @@ class BaseSync:
         # ``params`` is a dictionary that specifies all of the arguments
         # the sync command is able to process as well as their values.
         #
-        # Since ``ARGUMENT`` was added to the ``SyncCommand`` arg table,
+        # Since all arguments were added to the ``SyncCommand`` arg table,
         # the argument will be present in ``params``.
         #
-        # If the argument was included in the actual ``aws s3 sync`` command
+        # If an argument was included in the actual ``aws s3 sync`` command
         # its value will show up as ``True`` in ``params`` otherwise its value
         # will be ``False`` in ``params`` assuming the argument's ``action``
         # is ``store_true``.
         #
-        # Note: If the ``action`` of ``ARGUMENT`` was not set to
+        # Note: If the ``action`` of a sync strategy's argument was not set to
         # ``store_true``, this method will need to be overwritten.
         #
         name_in_params = None
-        # Check if a ``dest`` was specified in ``ARGUMENT`` as if it is
-        # specified, the boolean value will be located at the argument's
+        # Check if a ``dest`` was specified in the strategy's argument as if
+        # it is specified, the boolean value will be located at the argument's
         # ``dest`` value in the ``params`` dictionary.
         if self.arg_dest is not None:
             name_in_params = self.arg_dest
-        # Then check ``name`` of ``ARGUMENT``, the boolean value will be
-        # located at the argument's ``name`` value in the ``params``
+        # Then check ``name`` of the strategy's argument, the boolean value
+        # will be located at the argument's ``name`` value in the ``params``
         # dictionary.
         elif self.arg_name is not None:
             # ``name`` has all ``-`` replaced with ``_`` in ``params``.

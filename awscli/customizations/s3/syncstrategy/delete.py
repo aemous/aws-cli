@@ -29,7 +29,9 @@ DELETE = {
 
 
 class DeleteSync(BaseSync):
-    ARGUMENT = DELETE
+    ARGUMENTS = {
+        'file_not_at_src': DELETE,
+    }
 
     def determine_should_sync(self, src_file, dest_file):
         dest_file.operation_name = 'delete'

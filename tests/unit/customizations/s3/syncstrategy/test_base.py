@@ -50,7 +50,7 @@ class TestBaseSync(unittest.TestCase):
         register_args = session.register.call_args_list
         self.assertEqual(register_args[0][0][0], 'building-arg-table.s3_sync')
         self.assertEqual(
-            register_args[0][0][1], self.sync_strategy.add_sync_argument
+            register_args[0][0][1], self.sync_strategy.add_sync_arguments
         )
         self.assertEqual(register_args[1][0][0], 'choosing-s3-sync-strategy')
         self.assertEqual(
@@ -69,7 +69,9 @@ class TestBaseSync(unittest.TestCase):
         Ensure that the ``arg_name`` property works as expected.
         """
         self.assertEqual(self.sync_strategy.arg_name, None)
-        self.sync_strategy.ARGUMENT = {'name': 'my-sync-strategy'}
+        self.sync_strategy.ARGUMENTS = {
+            self.sync_strategy.sync_type: {'name': 'my-sync-strategy'}
+        }
         self.assertEqual(self.sync_strategy.arg_name, 'my-sync-strategy')
 
     def test_arg_dest(self):
@@ -77,7 +79,9 @@ class TestBaseSync(unittest.TestCase):
         Ensure that the ``arg_dest`` property works as expected.
         """
         self.assertEqual(self.sync_strategy.arg_dest, None)
-        self.sync_strategy.ARGUMENT = {'dest': 'my-dest'}
+        self.sync_strategy.ARGUMENTS = {
+            self.sync_strategy.sync_type: {'dest': 'my-dest'}
+        }
         self.assertEqual(self.sync_strategy.arg_dest, 'my-dest')
 
     def test_add_sync_argument(self):
@@ -86,8 +90,10 @@ class TestBaseSync(unittest.TestCase):
         the command's ``arg_table``.
         """
         arg_table = [{'name': 'original_argument'}]
-        self.sync_strategy.ARGUMENT = {'name': 'sync_argument'}
-        self.sync_strategy.add_sync_argument(arg_table)
+        self.sync_strategy.ARGUMENTS = {
+            self.sync_strategy.sync_type: {'name': 'sync_argument'}
+        }
+        self.sync_strategy.add_sync_arguments(arg_table)
         self.assertEqual(
             arg_table,
             [{'name': 'original_argument'}, {'name': 'sync_argument'}],
@@ -99,7 +105,7 @@ class TestBaseSync(unittest.TestCase):
         ``ARGUMENT`` table is specified.
         """
         arg_table = [{'name': 'original_argument'}]
-        self.sync_strategy.add_sync_argument(arg_table)
+        self.sync_strategy.add_sync_arguments(arg_table)
         self.assertEqual(arg_table, [{'name': 'original_argument'}])
 
     def test_no_use_sync_strategy_for_no_argument_specified(self):
@@ -114,7 +120,9 @@ class TestBaseSync(unittest.TestCase):
         Test if sync strategy argument has ``name`` but no ``dest`` and the
         strategy was called in ``params``.
         """
-        self.sync_strategy.ARGUMENT = {'name': 'my-sync-strategy'}
+        self.sync_strategy.ARGUMENTS = {
+            self.sync_strategy.sync_type: {'name': 'my-sync-strategy'}
+        }
         params = {'my_sync_strategy': True}
         self.assertEqual(
             self.sync_strategy.use_sync_strategy(params), self.sync_strategy
@@ -125,7 +133,9 @@ class TestBaseSync(unittest.TestCase):
         Test if sync strategy argument has ``name`` but no ``dest`` but
         the strategy was not called in ``params``.
         """
-        self.sync_strategy.ARGUMENT = {'name': 'my-sync-strategy'}
+        self.sync_strategy.ARGUMENTS = {
+            self.sync_strategy.sync_type: {'name': 'my-sync-strategy'}
+        }
         params = {'my_sync_strategy': False}
         self.assertEqual(self.sync_strategy.use_sync_strategy(params), None)
 
@@ -134,7 +144,9 @@ class TestBaseSync(unittest.TestCase):
         Test if sync strategy argument has a ``name`` but for whatever reason
         the strategy is not in ``params``.
         """
-        self.sync_strategy.ARGUMENT = {'name': 'my-sync-strategy'}
+        self.sync_strategy.ARGUMENTS = {
+            self.sync_strategy.sync_type: {'name': 'my-sync-strategy'}
+        }
         self.assertEqual(self.sync_strategy.use_sync_strategy({}), None)
 
     def test_use_sync_strategy_for_name_and_dest(self):
@@ -142,9 +154,11 @@ class TestBaseSync(unittest.TestCase):
         Test if sync strategy argument has ``name`` and ``dest`` and the
         strategy was called in ``params``.
         """
-        self.sync_strategy.ARGUMENT = {
-            'name': 'my-sync-strategy',
-            'dest': 'my-dest',
+        self.sync_strategy.ARGUMENTS = {
+            self.sync_strategy.sync_type: {
+                'name': 'my-sync-strategy',
+                'dest': 'my-dest',
+            }
         }
         params = {'my-dest': True}
         self.assertEqual(
@@ -156,9 +170,11 @@ class TestBaseSync(unittest.TestCase):
         Test if sync strategy argument has ``name`` and ``dest`` but the
         the strategy was not called in ``params``.
         """
-        self.sync_strategy.ARGUMENT = {
-            'name': 'my-sync-strategy',
-            'dest': 'my-dest',
+        self.sync_strategy.ARGUMENTS = {
+            self.sync_strategy.sync_type: {
+                'name': 'my-sync-strategy',
+                'dest': 'my-dest',
+            }
         }
         params = {'my-dest': False}
         self.assertEqual(self.sync_strategy.use_sync_strategy(params), None)
@@ -169,9 +185,11 @@ class TestBaseSync(unittest.TestCase):
         the strategy was not called in ``params`` even though the ``name`` was
         called in ``params``.
         """
-        self.sync_strategy.ARGUMENT = {
-            'name': 'my-sync-strategy',
-            'dest': 'my-dest',
+        self.sync_strategy.ARGUMENTS = {
+            self.sync_strategy.sync_type: {
+                'name': 'my-sync-strategy',
+                'dest': 'my-dest',
+            }
         }
         params = {'my-sync-strategy': True}
         self.assertEqual(self.sync_strategy.use_sync_strategy(params), None)

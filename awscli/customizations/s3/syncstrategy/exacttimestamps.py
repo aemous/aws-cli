@@ -31,7 +31,9 @@ EXACT_TIMESTAMPS = {
 
 
 class ExactTimestampsSync(SizeAndLastModifiedSync):
-    ARGUMENT = EXACT_TIMESTAMPS
+    ARGUMENTS = {
+        'file_at_src_and_dest': EXACT_TIMESTAMPS,
+    }
 
     def compare_time(self, src_file, dest_file):
         src_time = src_file.last_update
