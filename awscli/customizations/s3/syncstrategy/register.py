@@ -10,6 +10,7 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
+from awscli.customizations.s3.syncstrategy.base import NeverSync
 from awscli.customizations.s3.syncstrategy.delete import DeleteSync
 from awscli.customizations.s3.syncstrategy.exacttimestamps import (
     ExactTimestampsSync,
@@ -47,5 +48,8 @@ def register_sync_strategies(command_table, session, **kwargs):
 
     # Register the delete sync strategy.
     register_sync_strategy(session, DeleteSync, 'file_not_at_src')
+
+    # Register the never sync strategy for when file already exists at destination.
+    register_sync_strategy(session, NeverSync, 'file_at_src_and_dest')
 
     # Register additional sync strategies here...

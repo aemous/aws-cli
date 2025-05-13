@@ -12,22 +12,10 @@
 # language governing permissions and limitations under the License.
 import logging
 
+from awscli.customizations.s3.argumentschema import EXACT_TIMESTAMPS
 from awscli.customizations.s3.syncstrategy.base import SizeAndLastModifiedSync
 
 LOG = logging.getLogger(__name__)
-
-
-EXACT_TIMESTAMPS = {
-    'name': 'exact-timestamps',
-    'action': 'store_true',
-    'help_text': (
-        'When syncing from S3 to local, same-sized '
-        'items will be ignored only when the timestamps '
-        'match exactly. The default behavior is to ignore '
-        'same-sized items unless the local version is newer '
-        'than the S3 version.'
-    ),
-}
 
 
 class ExactTimestampsSync(SizeAndLastModifiedSync):

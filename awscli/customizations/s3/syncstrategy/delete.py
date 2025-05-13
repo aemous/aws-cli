@@ -12,20 +12,10 @@
 # language governing permissions and limitations under the License.
 import logging
 
+from awscli.customizations.s3.argumentschema import DELETE
 from awscli.customizations.s3.syncstrategy.base import BaseSync
 
 LOG = logging.getLogger(__name__)
-
-
-DELETE = {
-    'name': 'delete',
-    'action': 'store_true',
-    'help_text': (
-        "Files that exist in the destination but not in the source are "
-        "deleted during sync. Note that files excluded by filters are "
-        "excluded from deletion."
-    ),
-}
 
 
 class DeleteSync(BaseSync):

@@ -12,19 +12,10 @@
 # language governing permissions and limitations under the License.
 import logging
 
+from awscli.customizations.s3.argumentschema import SIZE_ONLY
 from awscli.customizations.s3.syncstrategy.base import BaseSync
 
 LOG = logging.getLogger(__name__)
-
-
-SIZE_ONLY = {
-    'name': 'size-only',
-    'action': 'store_true',
-    'help_text': (
-        'Makes the size of each key the only criteria used to '
-        'decide whether to sync from source to destination.'
-    ),
-}
 
 
 class SizeOnlySync(BaseSync):

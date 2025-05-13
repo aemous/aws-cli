@@ -83,6 +83,9 @@ class BaseS3TransferCommandTest(BaseAWSCommandParamsTest):
             contents.append(content)
         return {'Contents': contents, 'CommonPrefixes': []}
 
+    def put_object_response(self, etag):
+        return {'ETag': etag}
+
     def get_object_response(self):
         return {'ETag': '"foo-1"', 'Body': BytesIO(b'foo')}
 
