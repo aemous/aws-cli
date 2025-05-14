@@ -13,6 +13,7 @@
 import logging
 import os
 import sys
+from typing import Type
 
 from botocore.client import Config
 from botocore.useragent import register_feature_id
@@ -39,7 +40,7 @@ from awscli.customizations.s3.s3handler import S3TransferHandlerFactory
 from awscli.customizations.s3.syncstrategy.base import (
     MissingFileSync,
     NeverSync,
-    SizeAndLastModifiedSync,
+    SizeAndLastModifiedSync, AlwaysSync, BaseSync,
 )
 from awscli.customizations.s3.utils import (
     RequestParamsMapper,
@@ -686,6 +687,10 @@ class CommandArchitecture:
                 self.instructions.append('filters')
             if self.cmd == 'sync':
                 self.instructions.append('comparator')
+            elif (
+                    self.cmd == 'cp' or self.cmd == 'mv'
+            ) and self.parameters.get('no_overwrite'):
+                self.instructions.append('comparator')
             self.instructions.append('file_info_builder')
         self.instructions.append('s3_handler')
 
@@ -694,9 +699,9 @@ class CommandArchitecture:
 
     def choose_sync_strategies(
             self,
-            file_at_src_and_dest=SizeAndLastModifiedSync,
-            file_not_at_dest=MissingFileSync,
-            file_not_at_src=NeverSync,
+            file_at_src_and_dest: Type[BaseSync]=SizeAndLastModifiedSync,
+            file_not_at_dest: Type[BaseSync]=MissingFileSync,
+            file_not_at_src: Type[BaseSync]=NeverSync,
     ):
         """Determines the sync strategy for the command.
 
@@ -814,7 +819,16 @@ class CommandArchitecture:
             self._transfer_manager, result_queue
         )
 
-        sync_strategies = self.choose_sync_strategies()
+        if (
+                self.cmd == 'cp' or self.cmd == 'mv'
+        ) and self.parameters.get('no_overwrite'):
+            sync_strategies = self.choose_sync_strategies(
+                file_at_src_and_dest=NeverSync,
+                file_not_at_dest=AlwaysSync,
+                file_not_at_src=NeverSync,
+            )
+        else:
+            sync_strategies = self.choose_sync_strategies()
 
         command_dict = {}
         if self.cmd == 'sync':
@@ -834,6 +848,18 @@ class CommandArchitecture:
                 'setup': [stream_file_info],
                 's3_handler': [s3_transfer_handler],
             }
+        elif self.cmd == 'cp' and self.parameters['no_overwrite']:
+            command_dict = {
+                'setup': [files, rev_files],
+                'file_generator': [file_generator, rev_generator],
+                'filters': [
+                    create_filter(self.parameters),
+                    create_filter(self.parameters),
+                ],
+                'comparator': [Comparator(**sync_strategies)],
+                'file_info_builder': [file_info_builder],
+                's3_handler': [s3_transfer_handler],
+            }
         elif self.cmd == 'cp':
             command_dict = {
                 'setup': [files],
@@ -847,6 +873,15 @@ class CommandArchitecture:
                 'setup': [files],
                 'file_generator': [file_generator],
                 'filters': [create_filter(self.parameters)],
+                'file_info_builder': [file_info_builder],
+                's3_handler': [s3_transfer_handler],
+            }
+        elif self.cmd == 'mv' and self.parameters['no_overwrite']:
+            command_dict = {
+                'setup': [files],
+                'file_generator': [file_generator],
+                'filters': [create_filter(self.parameters)],
+                'comparator': [Comparator(**sync_strategies)],
                 'file_info_builder': [file_info_builder],
                 's3_handler': [s3_transfer_handler],
             }

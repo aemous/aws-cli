@@ -248,6 +248,14 @@ class SizeAndLastModifiedSync(BaseSync):
         return should_sync
 
 
+class AlwaysSync(BaseSync):
+    def __init__(self, sync_type='file_not_at_dest'):
+        super().__init__(sync_type)
+
+    def determine_should_sync(self, src_file, dest_file):
+        return True
+
+
 class NeverSync(BaseSync):
     ARGUMENTS = {
         'file_at_src_and_dest': NO_OVERWRITE,
