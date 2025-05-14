@@ -312,6 +312,89 @@ class TestMvCommand(BaseS3TransferCommandTest):
             self.operations_called[1][1]['ChecksumMode'], 'ENABLED'
         )
 
+    def test_upload_no_overwrite_does_not_overwrite(self):
+        # when there's 1 files in the local dir
+        filename = self.files.create_file('foo.txt', 'contents')
+        # when the destination bucket has the file
+        self.parsed_responses = [
+            self.head_object_response(),
+        ]
+        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-overwrite'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # nothing should be uploaded
+        self.assert_operations_called(
+            [
+                self.head_object_request('bucket', 'foo.txt'),
+            ]
+        )
+
+        # nothing should be deleted
+        self.assertTrue(os.path.exists(filename))
+
+
+    def test_download_no_overwrite_does_not_overwrite(self):
+        # when the source bucket has 1 files
+        self.parsed_responses = [
+            self.head_object_response(),
+        ]
+        # when the local destination has the file
+        self.files.create_file('foo', 'contents')
+        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-overwrite'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # nothing should be downloaded or deleted
+        self.assert_operations_called(
+            [
+                self.head_object_request('bucket', 'foo'),
+            ]
+        )
+
+    def test_upload_recursive_no_overwrite_does_not_overwrite(self):
+        # when there's 2 files in the local dir
+        present_filename = self.files.create_file('foo.txt', 'contents')
+        missing_filename = self.files.create_file('bar.txt', 'contents')
+        # when the destination bucket has 1 of the 2 files
+        self.parsed_responses = [
+            self.list_objects_response(['foo.txt']),
+            self.put_object_response("etag-123")
+        ]
+        cmdline = f'{self.prefix} {self.files.rootdir} s3://bucket --no-overwrite --recursive'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # only the missing file should be uploaded
+        self.assert_operations_called(
+            [
+                self.list_objects_request('bucket'),
+                self.put_object_request('bucket', 'bar.txt', ContentType='text/plain'),
+            ]
+        )
+
+        # only the missing file should be deleted
+        self.assertFalse(os.path.exists(missing_filename))
+        self.assertTrue(os.path.exists(present_filename))
+
+    def test_download_recursive_no_overwrite_does_not_overwrite(self):
+        # when the source bucket has 2 files
+        self.parsed_responses = [
+            self.list_objects_response(['foo', 'bar']),
+            self.get_object_response(),
+            self.delete_object_response()
+        ]
+        # when the local destination has 1 of the 2 files
+        self.files.create_file('foo', 'contents')
+        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-overwrite --recursive'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # only the missing file should be downloaded and deleted
+        self.assert_operations_called(
+            [
+                self.list_objects_request('bucket'),
+                self.get_object_request('bucket', 'bar'),
+                self.delete_object_request('bucket', 'bar')
+            ]
+        )
+
 
 class TestMvWithCRTClient(BaseCRTTransferClientTest):
     def test_upload_move_using_crt_client(self):

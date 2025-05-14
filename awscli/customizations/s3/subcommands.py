@@ -878,9 +878,12 @@ class CommandArchitecture:
             }
         elif self.cmd == 'mv' and self.parameters['no_overwrite']:
             command_dict = {
-                'setup': [files],
-                'file_generator': [file_generator],
-                'filters': [create_filter(self.parameters)],
+                'setup': [files, rev_files],
+                'file_generator': [file_generator, rev_generator],
+                'filters': [
+                    create_filter(self.parameters),
+                    create_filter(self.parameters),
+                ],
                 'comparator': [Comparator(**sync_strategies)],
                 'file_info_builder': [file_info_builder],
                 's3_handler': [s3_transfer_handler],
