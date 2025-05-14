@@ -17,6 +17,7 @@ from awscrt.s3 import S3RequestType
 from awscli.compat import BytesIO
 from awscli.customizations.s3.utils import relative_path
 from awscli.testutils import cd, mock
+from botocore.awsrequest import AWSResponse
 from tests.functional.s3 import (
     BaseCRTTransferClientTest,
     BaseS3CLIRunnerTest,
@@ -558,25 +559,6 @@ class TestSyncCommand(BaseS3TransferCommandTest):
             ]
         )
 
-    def test_download_no_overwrite_does_not_overwrite(self):
-        # when the source bucket has 2 files
-        self.parsed_responses = [
-            self.list_objects_response(['foo', 'bar']),
-            self.get_object_response(),
-        ]
-        # when the local destination has 1 of the 2 files
-        self.files.create_file('foo', 'contents')
-        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-overwrite'
-        self.run_cmd(cmdline, expected_rc=0)
-
-        # only the missing file should be downloaded
-        self.assert_operations_called(
-            [
-                self.list_objects_request('bucket'),
-                self.get_object_request('bucket', 'bar'),
-            ]
-        )
-
     def test_upload_no_create_does_not_create(self):
         # when there's 2 files in the local dir
         self.files.create_file('foo.txt', 'contents')
@@ -594,6 +576,25 @@ class TestSyncCommand(BaseS3TransferCommandTest):
             [
                 self.list_objects_request('bucket'),
                 self.put_object_request('bucket', 'foo.txt', ContentType='text/plain'),
+            ]
+        )
+
+    def test_download_no_overwrite_does_not_overwrite(self):
+        # when the source bucket has 2 files
+        self.parsed_responses = [
+            self.list_objects_response(['foo', 'bar']),
+            self.get_object_response(),
+        ]
+        # when the local destination has 1 of the 2 files
+        self.files.create_file('foo', 'contents')
+        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-overwrite'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # only the missing file should be downloaded
+        self.assert_operations_called(
+            [
+                self.list_objects_request('bucket'),
+                self.get_object_request('bucket', 'bar'),
             ]
         )
 

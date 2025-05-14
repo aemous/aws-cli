@@ -689,7 +689,10 @@ class CommandArchitecture:
                 self.instructions.append('comparator')
             elif (
                     self.cmd == 'cp' or self.cmd == 'mv'
-            ) and self.parameters.get('no_overwrite'):
+            ) and (
+                    self.parameters.get('no_overwrite')
+                    or self.parameters.get('no_create')
+            ):
                 self.instructions.append('comparator')
             self.instructions.append('file_info_builder')
         self.instructions.append('s3_handler')
@@ -819,12 +822,24 @@ class CommandArchitecture:
             self._transfer_manager, result_queue
         )
 
-        if (
+        cp_or_mv = (
                 self.cmd == 'cp' or self.cmd == 'mv'
-        ) and self.parameters.get('no_overwrite'):
+        )
+
+        if (
+            cp_or_mv and self.parameters.get('no_overwrite')
+        ):
             sync_strategies = self.choose_sync_strategies(
-                file_at_src_and_dest=NeverSync,
-                file_not_at_dest=AlwaysSync,
+                file_at_src_and_dest = NeverSync,
+                file_not_at_dest = AlwaysSync,
+                file_not_at_src = NeverSync,
+            )
+        elif (
+            cp_or_mv and self.parameters.get('no_create')
+        ):
+            sync_strategies = self.choose_sync_strategies(
+                file_at_src_and_dest=AlwaysSync,
+                file_not_at_dest=NeverSync,
                 file_not_at_src=NeverSync,
             )
         else:
@@ -848,7 +863,9 @@ class CommandArchitecture:
                 'setup': [stream_file_info],
                 's3_handler': [s3_transfer_handler],
             }
-        elif self.cmd == 'cp' and self.parameters['no_overwrite']:
+        elif self.cmd == 'cp' and (
+                self.parameters['no_overwrite'] or self.parameters['no_create']
+        ):
             command_dict = {
                 'setup': [files, rev_files],
                 'file_generator': [file_generator, rev_generator],
@@ -876,7 +893,9 @@ class CommandArchitecture:
                 'file_info_builder': [file_info_builder],
                 's3_handler': [s3_transfer_handler],
             }
-        elif self.cmd == 'mv' and self.parameters['no_overwrite']:
+        elif self.cmd == 'mv' and (
+                self.parameters['no_overwrite'] or self.parameters['no_create']
+        ):
             command_dict = {
                 'setup': [files, rev_files],
                 'file_generator': [file_generator, rev_generator],
