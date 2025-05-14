@@ -692,7 +692,12 @@ class CommandArchitecture:
     def needs_filegenerator(self):
         return not self.parameters['is_stream']
 
-    def choose_sync_strategies(self):
+    def choose_sync_strategies(
+            self,
+            file_at_src_and_dest=SizeAndLastModifiedSync,
+            file_not_at_dest=MissingFileSync,
+            file_not_at_src=NeverSync,
+    ):
         """Determines the sync strategy for the command.
 
         It defaults to the default sync strategies but a customizable sync
@@ -702,10 +707,10 @@ class CommandArchitecture:
         sync_strategies = {}
         # Set the default strategies.
         sync_strategies['file_at_src_and_dest_sync_strategy'] = (
-            SizeAndLastModifiedSync()
+            file_at_src_and_dest()
         )
-        sync_strategies['file_not_at_dest_sync_strategy'] = MissingFileSync()
-        sync_strategies['file_not_at_src_sync_strategy'] = NeverSync()
+        sync_strategies['file_not_at_dest_sync_strategy'] = file_not_at_dest()
+        sync_strategies['file_not_at_src_sync_strategy'] = file_not_at_src()
 
         # Determine what strategies to override if any.
         responses = self.session.emit(
