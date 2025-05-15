@@ -17,6 +17,7 @@ from awscrt.s3 import S3RequestType
 
 from awscli.compat import BytesIO
 from awscli.testutils import mock
+from botocore.awsrequest import AWSResponse
 from tests import requires_crt
 from tests.functional.s3 import (
     BaseCRTTransferClientTest,
@@ -332,21 +333,33 @@ class TestMvCommand(BaseS3TransferCommandTest):
         # nothing should be deleted
         self.assertTrue(os.path.exists(filename))
 
-
-    def test_download_no_overwrite_does_not_overwrite(self):
-        # when the source bucket has 1 files
+    def test_upload_no_overwrite_not_in_dest(self):
+        # when uploading a single file
+        self.files.create_file('foo.txt', 'contents')
+        # when the destination bucket does not have the file
+        self.error_http_response = AWSResponse(
+            None,
+            404,
+            {},
+            None,
+        )
         self.parsed_responses = [
-            self.head_object_response(),
+            {
+                'Error': {
+                    'Code': 'NoSuchKey',
+                    'Message': 'The specified key does not exist',
+                }
+            },
+            self.put_object_response("etag-123"),
         ]
-        # when the local destination has the file
-        self.files.create_file('foo', 'contents')
-        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-overwrite'
+        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-overwrite'
         self.run_cmd(cmdline, expected_rc=0)
 
-        # nothing should be downloaded or deleted
+        # the file should be uploaded
         self.assert_operations_called(
             [
-                self.head_object_request('bucket', 'foo'),
+                self.head_object_request('bucket', 'foo.txt'),
+                self.put_object_request('bucket', 'foo.txt'),
             ]
         )
 
@@ -374,6 +387,42 @@ class TestMvCommand(BaseS3TransferCommandTest):
         self.assertFalse(os.path.exists(missing_filename))
         self.assertTrue(os.path.exists(present_filename))
 
+
+    def test_download_no_overwrite_does_not_overwrite(self):
+        # when the source bucket has 1 files
+        self.parsed_responses = [
+            self.head_object_response(),
+        ]
+        # when the local destination has the file
+        self.files.create_file('foo', 'contents')
+        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-overwrite'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # nothing should be downloaded or deleted
+        self.assert_operations_called(
+            [
+                self.head_object_request('bucket', 'foo'),
+            ]
+        )
+
+    def test_download_no_overwrite_not_in_dest(self):
+        # when the source bucket has 1 files
+        self.parsed_responses = [
+            self.head_object_response(),
+            self.get_object_response(),
+        ]
+        # when the local destination does not have the file
+        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-overwrite'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # the file should be downloaded
+        self.assert_operations_called(
+            [
+                self.head_object_request('bucket', 'foo'),
+                self.get_object_request('bucket', 'foo'),
+            ]
+        )
+
     def test_download_recursive_no_overwrite_does_not_overwrite(self):
         # when the source bucket has 2 files
         self.parsed_responses = [
@@ -392,6 +441,99 @@ class TestMvCommand(BaseS3TransferCommandTest):
                 self.list_objects_request('bucket'),
                 self.get_object_request('bucket', 'bar'),
                 self.delete_object_request('bucket', 'bar')
+            ]
+        )
+
+    def test_upload_no_create_not_in_dest(self):
+        # when there's 1 files in the local dir
+        filename = self.files.create_file('foo.txt', 'contents')
+        # when the destination bucket does not have the file
+        self.error_http_response = AWSResponse(
+            None,
+            404,
+            {},
+            None,
+        )
+        self.parsed_responses = [
+            {
+                'Error': {
+                    'Code': 'NoSuchKey',
+                    'Message': 'The specified key does not exist',
+                }
+            },
+        ]
+
+        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-create'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # nothing should be uploaded
+        self.assert_operations_called(
+            [
+                self.head_object_request('bucket', 'foo.txt'),
+            ]
+        )
+
+        # the source file should not be deleted
+        self.assertTrue(os.path.exists(filename))
+
+    def test_upload_recursive_no_create_does_not_create(self):
+        # when there's 2 files in the local dir
+        filename_existing = self.files.create_file('foo.txt', 'contents')
+        filename_missing = self.files.create_file('bar.txt', 'contents')
+        # when the destination bucket has 1 of the 2 files
+        self.parsed_responses = [
+            self.list_objects_response(['foo.txt']),
+            self.put_object_response("etag-123")
+        ]
+        cmdline = f'{self.prefix} {self.files.rootdir} s3://bucket --no-create --recursive'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # only the existing file should be uploaded
+        self.assert_operations_called(
+            [
+                self.list_objects_request('bucket'),
+                self.put_object_request('bucket', 'foo.txt', ContentType='text/plain'),
+            ]
+        )
+
+        # only the existing file should have been deleted
+        self.assertFalse(os.path.exists(filename_existing))
+        self.assertTrue(os.path.exists(filename_missing))
+
+    def test_download_no_create_not_in_dest(self):
+        # when the source bucket has 1 files
+        self.parsed_responses = [
+            self.head_object_response(),
+        ]
+        # when the local destination does not have the file
+        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-create'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # the file should not be downloaded
+        self.assert_operations_called(
+            [
+                self.head_object_request('bucket', 'foo'),
+            ]
+        )
+
+    def test_download_recursive_no_create_does_not_create(self):
+        # when the source bucket has 2 files
+        self.parsed_responses = [
+            self.list_objects_response(['foo', 'bar']),
+            self.get_object_response(),
+            self.delete_object_response(),
+        ]
+        # when the local destination has 1 of the 2 files
+        self.files.create_file('foo', 'contents')
+        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-create --recursive'
+        self.run_cmd(cmdline, expected_rc=0)
+
+        # only the existing file should be downloaded
+        self.assert_operations_called(
+            [
+                self.list_objects_request('bucket'),
+                self.get_object_request('bucket', 'foo'),
+                self.delete_object_request('bucket', 'foo'),
             ]
         )
 
