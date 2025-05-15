@@ -14,6 +14,7 @@ import os
 import stat
 import sys
 
+import botocore
 from botocore.exceptions import ClientError
 from dateutil.parser import parse
 from dateutil.tz import tzlocal
@@ -137,6 +138,7 @@ class FileGenerator:
         page_size=None,
         result_queue=None,
         request_parameters=None,
+        ignore_src_file_not_found=False,
     ):
         self._client = client
         self.operation_name = operation_name
@@ -148,6 +150,7 @@ class FileGenerator:
         self.request_parameters = {}
         if request_parameters is not None:
             self.request_parameters = request_parameters
+        self.ignore_src_file_not_found = ignore_src_file_not_found
 
     def call(self, files):
         """
@@ -161,6 +164,10 @@ class FileGenerator:
         dest_type = files['dest']['type']
         file_iterator = function_table[src_type](source, files['dir_op'])
         for src_path, extra_information in file_iterator:
+            if extra_information is None:
+                # None for extra_information means that the file does not
+                # exist and ignore_src_file_not_found is True.
+                return
             dest_path, compare_key = find_dest_path_comp_key(files, src_path)
             file_stat_kwargs = {
                 'src': src_path,
@@ -175,8 +182,10 @@ class FileGenerator:
 
     def _inject_extra_information(self, file_stat_kwargs, extra_information):
         src_type = file_stat_kwargs['src_type']
-        file_stat_kwargs['size'] = extra_information['Size']
-        file_stat_kwargs['last_update'] = extra_information['LastModified']
+        if 'Size' in extra_information:
+            file_stat_kwargs['size'] = extra_information['Size']
+        if 'LastModified' in extra_information:
+            file_stat_kwargs['last_update'] = extra_information['LastModified']
 
         # S3 objects require the response data retrieved from HeadObject
         # and ListObject
@@ -298,6 +307,8 @@ class FileGenerator:
                 path = path[:-1]
             if os.path.islink(path):
                 return True
+        if self.ignore_src_file_not_found and not os.path.exists(path):
+            return True
         warning_triggered = self.triggers_warning(path)
         if warning_triggered:
             return True
@@ -313,7 +324,11 @@ class FileGenerator:
         checks for files that do not exist and files that the user does
         not have read access.
         """
-        if not os.path.exists(path):
+        if not os.path.exists(path) and self.ignore_src_file_not_found:
+            # If the file does not exist and ignore_src_file_not_found
+            # we do not add a warning.
+            return False
+        if not os.path.exists(path) and not self.ignore_src_file_not_found:
             warning = create_warning(path, "File does not exist.")
             self.result_queue.put(warning)
             return True
@@ -387,6 +402,12 @@ class FileGenerator:
             params = {'Bucket': bucket, 'Key': key}
             params.update(self.request_parameters.get('HeadObject', {}))
             response = self._client.head_object(**params)
+        except self._client.exceptions.NoSuchKey:
+            if self.ignore_src_file_not_found:
+                # We return None to signify to the caller the file
+                # does not exist
+                return s3_path, None
+            raise
         except ClientError as e:
             # We want to try to give a more helpful error message.
             # This is what the customer is going to see so we want to
@@ -394,8 +415,12 @@ class FileGenerator:
             if not e.response['Error']['Code'] == '404':
                 raise
             # The key does not exist so we'll raise a more specific
-            # error message here.
+            # error message here if ignore_dest_file_not_found is false.
             response = e.response.copy()
+            if self.ignore_src_file_not_found:
+                # We return None to signify to the caller the file
+                # does not exist
+                return s3_path, None
             response['Error']['Message'] = 'Key "%s" does not exist' % key
             raise ClientError(response, 'HeadObject')
         response['Size'] = int(response.pop('ContentLength'))

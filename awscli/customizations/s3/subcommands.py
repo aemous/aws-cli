@@ -770,7 +770,6 @@ class CommandArchitecture:
         }
         result_queue = queue.Queue()
         operation_name = cmd_translation[paths_type]
-
         fgen_kwargs = {
             'client': self._source_client,
             'operation_name': operation_name,
@@ -784,6 +783,10 @@ class CommandArchitecture:
             'follow_symlinks': self.parameters['follow_symlinks'],
             'page_size': self.parameters['page_size'],
             'result_queue': result_queue,
+            'ignore_src_file_not_found': (
+                self.parameters.get('no_create')
+                or self.parameters.get('no_overwrite')
+            ),
         }
 
         fgen_request_parameters = (

@@ -1093,7 +1093,7 @@ class TestCPCommand(BaseCPCommandTest):
         self.assert_operations_called(
             [
                 self.head_object_request('bucket', 'foo.txt'),
-                self.put_object_request('bucket', 'foo.txt'),
+                self.put_object_request('bucket', 'foo.txt', ContentType='text/plain'),
             ]
         )
 

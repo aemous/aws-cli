@@ -340,7 +340,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
         self.error_http_response = AWSResponse(
             None,
             404,
-            {},
+            {'ContentLength': 10},
             None,
         )
         self.parsed_responses = [
@@ -359,7 +359,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
         self.assert_operations_called(
             [
                 self.head_object_request('bucket', 'foo.txt'),
-                self.put_object_request('bucket', 'foo.txt'),
+                self.put_object_request('bucket', 'foo.txt', ContentType='text/plain'),
             ]
         )
 
@@ -410,16 +410,18 @@ class TestMvCommand(BaseS3TransferCommandTest):
         self.parsed_responses = [
             self.head_object_response(),
             self.get_object_response(),
+            self.delete_object_response(),
         ]
         # when the local destination does not have the file
         cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-overwrite'
         self.run_cmd(cmdline, expected_rc=0)
 
-        # the file should be downloaded
+        # the file should be downloaded and deleted
         self.assert_operations_called(
             [
                 self.head_object_request('bucket', 'foo'),
                 self.get_object_request('bucket', 'foo'),
+                self.delete_object_request('bucket', 'foo')
             ]
         )
 
@@ -528,7 +530,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
         cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-create --recursive'
         self.run_cmd(cmdline, expected_rc=0)
 
-        # only the existing file should be downloaded
+        # only the existing file should be downloaded and deleted
         self.assert_operations_called(
             [
                 self.list_objects_request('bucket'),
