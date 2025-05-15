@@ -89,7 +89,7 @@ TRANSFER_ARGS = [
     REQUEST_PAYER,
     CHECKSUM_MODE,
     CHECKSUM_ALGORITHM,
-    NO_OVERWRITE,
+    NO_CLOBBER,
     NO_CREATE,
 ]
 
@@ -690,7 +690,7 @@ class CommandArchitecture:
             elif (
                     self.cmd == 'cp' or self.cmd == 'mv'
             ) and (
-                    self.parameters.get('no_overwrite')
+                    self.parameters.get('no_clobber')
                     or self.parameters.get('no_create')
             ):
                 self.instructions.append('comparator')
@@ -785,7 +785,7 @@ class CommandArchitecture:
             'result_queue': result_queue,
             'ignore_src_file_not_found': (
                 self.parameters.get('no_create')
-                or self.parameters.get('no_overwrite')
+                or self.parameters.get('no_clobber')
             ),
         }
 
@@ -830,7 +830,7 @@ class CommandArchitecture:
         )
 
         if (
-            cp_or_mv and self.parameters.get('no_overwrite')
+            cp_or_mv and self.parameters.get('no_clobber')
         ):
             sync_strategies = self.choose_sync_strategies(
                 file_at_src_and_dest = NeverSync,
@@ -867,7 +867,7 @@ class CommandArchitecture:
                 's3_handler': [s3_transfer_handler],
             }
         elif self.cmd == 'cp' and (
-                self.parameters['no_overwrite'] or self.parameters['no_create']
+                self.parameters['no_clobber'] or self.parameters['no_create']
         ):
             command_dict = {
                 'setup': [files, rev_files],
@@ -897,7 +897,7 @@ class CommandArchitecture:
                 's3_handler': [s3_transfer_handler],
             }
         elif self.cmd == 'mv' and (
-                self.parameters['no_overwrite'] or self.parameters['no_create']
+                self.parameters['no_clobber'] or self.parameters['no_create']
         ):
             command_dict = {
                 'setup': [files, rev_files],
@@ -1076,7 +1076,7 @@ class CommandParameters:
             self._raise_param_incompatible_for_streaming_cp_download(
                 self.parameters,
                 [
-                    NO_OVERWRITE['name'],
+                    NO_CLOBBER['name'],
                     NO_CREATE['name'],
                 ]
             )

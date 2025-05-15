@@ -871,11 +871,11 @@ class TestCPCommand(BaseCPCommandTest):
             stderr,
         )
 
-    def test_cannot_use_no_overwrite_with_stream_download(self):
-        cmdline = '%s s3://bucket/key.txt - --no-overwrite' % self.prefix
+    def test_cannot_use_no_clobber_with_stream_download(self):
+        cmdline = '%s s3://bucket/key.txt - --no-clobber' % self.prefix
         _, stderr, _ = self.run_cmd(cmdline, expected_rc=252)
         self.assertIn(
-            'The no-overwrite parameter is not '
+            'The no-clobber parameter is not '
             'compatible with streaming cp downloads',
             stderr,
         )
@@ -1050,14 +1050,14 @@ class TestCPCommand(BaseCPCommandTest):
             self.operations_called[1][1]['ChecksumMode'], 'ENABLED'
         )
 
-    def test_upload_no_overwrite_does_not_overwrite(self):
+    def test_upload_no_clobber_does_not_overwrite(self):
         # when there's 1 files in the local dir
         self.files.create_file('foo.txt', 'contents')
         # when the destination bucket has the file
         self.parsed_responses = [
             self.head_object_response(),
         ]
-        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-overwrite'
+        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # nothing should be uploaded
@@ -1067,7 +1067,7 @@ class TestCPCommand(BaseCPCommandTest):
             ]
         )
 
-    def test_upload_no_overwrite_not_in_dest(self):
+    def test_upload_no_clobber_not_in_dest(self):
         # when uploading a single file
         self.files.create_file('foo.txt', 'contents')
         # when the destination bucket does not have the file
@@ -1078,15 +1078,10 @@ class TestCPCommand(BaseCPCommandTest):
             None,
         )
         self.parsed_responses = [
-            {
-                'Error': {
-                    'Code': 'NoSuchKey',
-                    'Message': 'The specified key does not exist',
-                }
-            },
+            self.no_such_key_error_response(),
             self.put_object_response("etag-123"),
         ]
-        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-overwrite'
+        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # the file should be uploaded
@@ -1097,7 +1092,7 @@ class TestCPCommand(BaseCPCommandTest):
             ]
         )
 
-    def test_upload_recursive_no_overwrite_does_not_overwrite(self):
+    def test_upload_recursive_no_clobber_does_not_overwrite(self):
         # when there's 2 files in the local dir
         self.files.create_file('foo.txt', 'contents')
         self.files.create_file('bar.txt', 'contents')
@@ -1106,7 +1101,7 @@ class TestCPCommand(BaseCPCommandTest):
             self.list_objects_response(['foo.txt']),
             self.put_object_response("etag-123")
         ]
-        cmdline = f'{self.prefix} {self.files.rootdir} s3://bucket --no-overwrite --recursive'
+        cmdline = f'{self.prefix} {self.files.rootdir} s3://bucket --no-clobber --recursive'
         self.run_cmd(cmdline, expected_rc=0)
 
         # only the missing file should be uploaded
@@ -1117,14 +1112,14 @@ class TestCPCommand(BaseCPCommandTest):
             ]
         )
 
-    def test_download_no_overwrite_does_not_overwrite(self):
+    def test_download_no_clobber_does_not_overwrite(self):
         # when the source bucket has 1 files
         self.parsed_responses = [
             self.head_object_response(),
         ]
         # when the local destination has the file
         self.files.create_file('foo', 'contents')
-        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-overwrite'
+        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # nothing should be downloaded
@@ -1134,14 +1129,14 @@ class TestCPCommand(BaseCPCommandTest):
             ]
         )
 
-    def test_download_no_overwrite_not_in_dest(self):
+    def test_download_no_clobber_not_in_dest(self):
         # when the source bucket has 1 files
         self.parsed_responses = [
             self.head_object_response(),
             self.get_object_response(),
         ]
         # when the local destination does not have the file
-        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-overwrite'
+        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # the file should be downloaded
@@ -1152,7 +1147,7 @@ class TestCPCommand(BaseCPCommandTest):
             ]
         )
 
-    def test_download_recursive_no_overwrite_does_not_overwrite(self):
+    def test_download_recursive_no_clobber_does_not_overwrite(self):
         # when the source bucket has 2 files
         self.parsed_responses = [
             self.list_objects_response(['foo', 'bar']),
@@ -1160,7 +1155,7 @@ class TestCPCommand(BaseCPCommandTest):
         ]
         # when the local destination has 1 of the 2 files
         self.files.create_file('foo', 'contents')
-        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-overwrite --recursive'
+        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-clobber --recursive'
         self.run_cmd(cmdline, expected_rc=0)
 
         # only the missing file should be downloaded
@@ -1182,12 +1177,7 @@ class TestCPCommand(BaseCPCommandTest):
             None,
         )
         self.parsed_responses = [
-            {
-                'Error': {
-                    'Code': 'NoSuchKey',
-                    'Message': 'The specified key does not exist',
-                }
-            },
+            self.no_such_key_error_response(),
         ]
 
         cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-create'

@@ -15,6 +15,7 @@ import stat
 import sys
 
 import botocore
+import botocore.errorfactory
 from botocore.exceptions import ClientError
 from dateutil.parser import parse
 from dateutil.tz import tzlocal
@@ -402,17 +403,14 @@ class FileGenerator:
             params = {'Bucket': bucket, 'Key': key}
             params.update(self.request_parameters.get('HeadObject', {}))
             response = self._client.head_object(**params)
-        except self._client.exceptions.NoSuchKey:
-            if self.ignore_src_file_not_found:
-                # We return None to signify to the caller the file
-                # does not exist
-                return s3_path, None
-            raise
         except ClientError as e:
             # We want to try to give a more helpful error message.
             # This is what the customer is going to see so we want to
             # give as much detail as we have.
-            if not e.response['Error']['Code'] == '404':
+            if not (
+                    e.response['Error']['Code'] == 'NoSuchKey'
+                    or e.response['Error']['Code'] == '404'
+                ):
                 raise
             # The key does not exist so we'll raise a more specific
             # error message here if ignore_dest_file_not_found is false.

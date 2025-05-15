@@ -587,11 +587,12 @@ BUCKET_REGION = {
     ),
 }
 
-NO_OVERWRITE = {
-    'name': 'no-overwrite',
+NO_CLOBBER = {
+    'name': 'no-clobber',
     'action': 'store_true',
     'help_text': (
-        'Will not overwrite any file(s) in the destination.'
+        'Will not overwrite any file(s) in the destination. For cp or mv, '
+        'this will result in an extra S3 GET or HEAD request.'
     ),
 }
 
@@ -599,7 +600,8 @@ NO_CREATE = {
     'name': 'no-create',
     'action': 'store_true',
     'help_text': (
-        'Will not create any new file(s) in the destination.'
+        'Will not create any new file(s) in the destination. For cp or mv, '
+        'this will result in an extra S3 GET or HEAD request.'
     ),
 }
 

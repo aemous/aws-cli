@@ -13,7 +13,7 @@
 import logging
 
 from awscli.customizations.exceptions import ParamValidationError
-from awscli.customizations.s3.argumentschema import NO_CREATE, NO_OVERWRITE
+from awscli.customizations.s3.argumentschema import NO_CREATE, NO_CLOBBER
 
 LOG = logging.getLogger(__name__)
 
@@ -258,7 +258,7 @@ class AlwaysSync(BaseSync):
 
 class NeverSync(BaseSync):
     ARGUMENTS = {
-        'file_at_src_and_dest': NO_OVERWRITE,
+        'file_at_src_and_dest': NO_CLOBBER,
         'file_not_at_dest': NO_CREATE,
     }
 

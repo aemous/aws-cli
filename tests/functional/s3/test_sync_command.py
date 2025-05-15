@@ -539,7 +539,7 @@ class TestSyncCommand(BaseS3TransferCommandTest):
             ('ChecksumMode', 'ENABLED'), self.operations_called[1][1].items()
         )
 
-    def test_upload_no_overwrite_does_not_overwrite(self):
+    def test_upload_no_clobber_does_not_overwrite(self):
         # when there's 2 files in the local dir
         self.files.create_file('foo.txt', 'contents')
         self.files.create_file('bar.txt', 'contents')
@@ -548,7 +548,7 @@ class TestSyncCommand(BaseS3TransferCommandTest):
             self.list_objects_response(['foo.txt']),
             self.put_object_response("etag-123")
         ]
-        cmdline = f'{self.prefix} {self.files.rootdir} s3://bucket --no-overwrite'
+        cmdline = f'{self.prefix} {self.files.rootdir} s3://bucket --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # only the missing file should be uploaded
@@ -579,7 +579,7 @@ class TestSyncCommand(BaseS3TransferCommandTest):
             ]
         )
 
-    def test_download_no_overwrite_does_not_overwrite(self):
+    def test_download_no_clobber_does_not_overwrite(self):
         # when the source bucket has 2 files
         self.parsed_responses = [
             self.list_objects_response(['foo', 'bar']),
@@ -587,7 +587,7 @@ class TestSyncCommand(BaseS3TransferCommandTest):
         ]
         # when the local destination has 1 of the 2 files
         self.files.create_file('foo', 'contents')
-        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-overwrite'
+        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # only the missing file should be downloaded

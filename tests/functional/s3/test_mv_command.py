@@ -313,14 +313,14 @@ class TestMvCommand(BaseS3TransferCommandTest):
             self.operations_called[1][1]['ChecksumMode'], 'ENABLED'
         )
 
-    def test_upload_no_overwrite_does_not_overwrite(self):
+    def test_upload_no_clobber_does_not_overwrite(self):
         # when there's 1 files in the local dir
         filename = self.files.create_file('foo.txt', 'contents')
         # when the destination bucket has the file
         self.parsed_responses = [
             self.head_object_response(),
         ]
-        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-overwrite'
+        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # nothing should be uploaded
@@ -333,7 +333,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
         # nothing should be deleted
         self.assertTrue(os.path.exists(filename))
 
-    def test_upload_no_overwrite_not_in_dest(self):
+    def test_upload_no_clobber_not_in_dest(self):
         # when uploading a single file
         self.files.create_file('foo.txt', 'contents')
         # when the destination bucket does not have the file
@@ -344,15 +344,10 @@ class TestMvCommand(BaseS3TransferCommandTest):
             None,
         )
         self.parsed_responses = [
-            {
-                'Error': {
-                    'Code': 'NoSuchKey',
-                    'Message': 'The specified key does not exist',
-                }
-            },
+            self.no_such_key_error_response(),
             self.put_object_response("etag-123"),
         ]
-        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-overwrite'
+        cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # the file should be uploaded
@@ -363,7 +358,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
             ]
         )
 
-    def test_upload_recursive_no_overwrite_does_not_overwrite(self):
+    def test_upload_recursive_no_clobber_does_not_overwrite(self):
         # when there's 2 files in the local dir
         present_filename = self.files.create_file('foo.txt', 'contents')
         missing_filename = self.files.create_file('bar.txt', 'contents')
@@ -372,7 +367,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
             self.list_objects_response(['foo.txt']),
             self.put_object_response("etag-123")
         ]
-        cmdline = f'{self.prefix} {self.files.rootdir} s3://bucket --no-overwrite --recursive'
+        cmdline = f'{self.prefix} {self.files.rootdir} s3://bucket --no-clobber --recursive'
         self.run_cmd(cmdline, expected_rc=0)
 
         # only the missing file should be uploaded
@@ -388,14 +383,14 @@ class TestMvCommand(BaseS3TransferCommandTest):
         self.assertTrue(os.path.exists(present_filename))
 
 
-    def test_download_no_overwrite_does_not_overwrite(self):
+    def test_download_no_clobber_does_not_overwrite(self):
         # when the source bucket has 1 files
         self.parsed_responses = [
             self.head_object_response(),
         ]
         # when the local destination has the file
         self.files.create_file('foo', 'contents')
-        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-overwrite'
+        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # nothing should be downloaded or deleted
@@ -405,7 +400,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
             ]
         )
 
-    def test_download_no_overwrite_not_in_dest(self):
+    def test_download_no_clobber_not_in_dest(self):
         # when the source bucket has 1 files
         self.parsed_responses = [
             self.head_object_response(),
@@ -413,7 +408,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
             self.delete_object_response(),
         ]
         # when the local destination does not have the file
-        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-overwrite'
+        cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir}/foo --no-clobber'
         self.run_cmd(cmdline, expected_rc=0)
 
         # the file should be downloaded and deleted
@@ -425,7 +420,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
             ]
         )
 
-    def test_download_recursive_no_overwrite_does_not_overwrite(self):
+    def test_download_recursive_no_clobber_does_not_overwrite(self):
         # when the source bucket has 2 files
         self.parsed_responses = [
             self.list_objects_response(['foo', 'bar']),
@@ -434,7 +429,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
         ]
         # when the local destination has 1 of the 2 files
         self.files.create_file('foo', 'contents')
-        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-overwrite --recursive'
+        cmdline = f'{self.prefix} s3://bucket {self.files.rootdir} --no-clobber --recursive'
         self.run_cmd(cmdline, expected_rc=0)
 
         # only the missing file should be downloaded and deleted
@@ -457,12 +452,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
             None,
         )
         self.parsed_responses = [
-            {
-                'Error': {
-                    'Code': 'NoSuchKey',
-                    'Message': 'The specified key does not exist',
-                }
-            },
+            self.no_such_key_error_response(),
         ]
 
         cmdline = f'{self.prefix} {self.files.rootdir}/foo.txt s3://bucket/foo.txt --no-create'
