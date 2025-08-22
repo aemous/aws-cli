@@ -534,7 +534,7 @@ class ResultPrinter(BaseResultHandler):
         # so we call it again for safety
 
         # TODO the value files_transferred is 7 (the # of skipped files) before the first file transfers
-        LOGGER.debug("Actual %s Expected %s Skipped %s ProgressLength", actual, expected, self._result_recorder.files_skipped, self._progress_length)
+        LOGGER.debug("Actual %s Expected %s Skipped %s ProgressLength %s", actual, expected, self._result_recorder.files_skipped, self._progress_length)
         if actual == expected:
             self._clear_progress_if_no_more_expected_transfers()
         return actual != expected
