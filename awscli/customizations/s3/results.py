@@ -540,6 +540,7 @@ class ResultPrinter(BaseResultHandler):
         uni_print(statement, self._error_file)
 
     def _clear_progress_if_no_more_expected_transfers(self, **kwargs):
+        LOGGER.debug("Progress length %s Has remaining progress %s", self._progress_length, self._has_remaining_progress())
         if self._progress_length and not self._has_remaining_progress():
             uni_print(self._adjust_statement_padding(''), self._out_file)
 
