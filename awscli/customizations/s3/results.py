@@ -388,7 +388,7 @@ class ResultPrinter(BaseResultHandler):
 
     def _print_noop(self, **kwargs):
         # If the result does not have a handler, then do nothing with it.
-        pass
+        self._print_to_out_file('\n')
 
     def _print_dry_run(self, result, **kwargs):
         statement = self.DRY_RUN_FORMAT.format(
