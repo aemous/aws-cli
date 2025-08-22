@@ -523,14 +523,14 @@ class ResultPrinter(BaseResultHandler):
             "Expected Files %s",
             self._result_recorder.expected_totals_are_final(),
         )
-        # TODO if NOT recorder.final_expected_files_transferred == recorder.expected_files_transferred == 4
+        # TODO if NOT recorder.final_expected_files_transferred == recorder.expected_files_transferred == 4 (down) / 11 (up)
         if not self._result_recorder.expected_totals_are_final():
             return True
         # TODO the fact that we are seeing the log below, means final_expected_files_transferred = expected_files_transferred
         actual = self._result_recorder.files_transferred
         expected = self._result_recorder.expected_files_transferred - self._result_recorder.files_skipped
         # TODO the value files_transferred is 7 (the # of skipped files) before the first file transfers
-        LOGGER.debug("Actual %s Expected %s", actual, expected)
+        LOGGER.debug("Actual %s Expected %s Skipped %s", actual, expected, self._result_recorder.files_skipped)
         return actual != expected
 
     def _print_to_out_file(self, statement):
