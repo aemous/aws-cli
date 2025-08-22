@@ -311,7 +311,7 @@ class ResultRecorder(BaseResultHandler):
 
     def _record_skipped_file_result(self, result, **kwargs):
         self.files_skipped += 1
-        self.files_transferred += 1
+        # self.files_transferred += 1
 
     def _record_warning_result(self, **kwargs):
         self.files_warned += 1
@@ -523,10 +523,13 @@ class ResultPrinter(BaseResultHandler):
             "Expected Files %s",
             self._result_recorder.expected_totals_are_final(),
         )
+        # TODO if NOT recorder.final_expected_files_transferred == recorder.expected_files_transferred == 4
         if not self._result_recorder.expected_totals_are_final():
             return True
+        # TODO the fact that we are seeing the log below, means final_expected_files_transferred = expected_files_transferred
         actual = self._result_recorder.files_transferred
         expected = self._result_recorder.expected_files_transferred
+        # TODO the value files_transferred is 7 (the # of skipped files) before the first file transfers
         LOGGER.debug("Actual %s Expected %s", actual, expected)
         return actual != expected
 

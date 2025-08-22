@@ -167,6 +167,7 @@ class S3TransferHandler:
                     for submitter in self._submitters:
                         if submitter.can_submit(fileinfo):
                             if submitter.submit(fileinfo):
+                                # TODO IF SUBMITTED, GUARD IS A FUTURE. IF NOT, ITS NONE.
                                 total_submissions += 1
                             break
                 self._result_command_recorder.notify_total_submissions(
