@@ -528,7 +528,7 @@ class ResultPrinter(BaseResultHandler):
             return True
         # TODO the fact that we are seeing the log below, means final_expected_files_transferred = expected_files_transferred
         actual = self._result_recorder.files_transferred
-        expected = self._result_recorder.expected_files_transferred
+        expected = self._result_recorder.expected_files_transferred - self._result_recorder.files_skipped
         # TODO the value files_transferred is 7 (the # of skipped files) before the first file transfers
         LOGGER.debug("Actual %s Expected %s", actual, expected)
         return actual != expected
