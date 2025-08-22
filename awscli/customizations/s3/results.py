@@ -386,9 +386,15 @@ class ResultPrinter(BaseResultHandler):
             result=result
         )
 
-    def _print_noop(self, **kwargs):
+    def _print_noop(self, result, **kwargs):
         # If the result does not have a handler, then do nothing with it.
-        self._print_to_out_file('\n')
+        skip_statement = '{transfer_type} skipped to prevent overwrite: {transfer_location}'.format(
+            transfer_type=result.transfer_type,
+            transfer_location=self._get_transfer_location(result),
+        )
+        skip_statement = self._adjust_statement_padding(skip_statement)
+        self._print_to_out_file(skip_statement)
+        self._redisplay_progress()
 
     def _print_dry_run(self, result, **kwargs):
         statement = self.DRY_RUN_FORMAT.format(
