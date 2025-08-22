@@ -529,8 +529,14 @@ class ResultPrinter(BaseResultHandler):
         # TODO the fact that we are seeing the log below, means final_expected_files_transferred = expected_files_transferred
         actual = self._result_recorder.files_transferred
         expected = self._result_recorder.expected_files_transferred - self._result_recorder.files_skipped
+        # TODO hack (?) attempt at clearing the progress. I think _clear_progress_if_no_more_expected_transfers is being
+        # called before all transfers complete. if actual == expected, then all transfers should be complete
+        # so we call it again for safety
+
         # TODO the value files_transferred is 7 (the # of skipped files) before the first file transfers
-        LOGGER.debug("Actual %s Expected %s Skipped %s", actual, expected, self._result_recorder.files_skipped)
+        LOGGER.debug("Actual %s Expected %s Skipped %s ProgressLength", actual, expected, self._result_recorder.files_skipped, self._progress_length)
+        if actual == expected:
+            self._clear_progress_if_no_more_expected_transfers()
         return actual != expected
 
     def _print_to_out_file(self, statement):
