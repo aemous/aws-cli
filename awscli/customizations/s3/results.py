@@ -379,22 +379,18 @@ class ResultPrinter(BaseResultHandler):
             DryRunResult: self._print_dry_run,
             FinalTotalSubmissionsResult: self._clear_progress_if_no_more_expected_transfers,
         }
+        self._last_result = None
 
     def __call__(self, result):
         """Print the progress of the ongoing transfer based on a result"""
+        self._last_result = result
         self._result_handler_map.get(type(result), self._print_noop)(
             result=result
         )
 
     def _print_noop(self, result, **kwargs):
         # If the result does not have a handler, then do nothing with it.
-        skip_statement = '{transfer_type} skipped to prevent overwrite: {transfer_location}'.format(
-            transfer_type=result.transfer_type,
-            transfer_location=self._get_transfer_location(result),
-        )
-        skip_statement = self._adjust_statement_padding(skip_statement)
-        self._print_to_out_file(skip_statement)
-        self._redisplay_progress()
+        pass
 
     def _print_dry_run(self, result, **kwargs):
         statement = self.DRY_RUN_FORMAT.format(
@@ -459,6 +455,12 @@ class ResultPrinter(BaseResultHandler):
         LOGGER.debug("Remaining Progrss %s", self._has_remaining_progress())
         if self._has_remaining_progress():
             self._print_progress()
+        elif isinstance(self._last_result, SkipFileResult):
+            # if the last result is a SkipFileResult, and there is no progress remaining,
+            # then we must print a newline to guarantee that the program output does not
+            # end with a carriage return, as that may cause incompatibility with certain
+            # terminal programs.
+            self._print_to_out_file('\n')
 
     def _print_progress(self, **kwargs):
         # Get all of the statistics in the correct form.
