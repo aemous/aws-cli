@@ -454,7 +454,8 @@ class ResultPrinter(BaseResultHandler):
         # TODO alternative 2.2, instead of trying to print newline manually in the case
         # last result is skip, we can try to guard resetting progress length if last result
         # is Skip. This way, the progress length from the last progress update persists.
-        self._progress_length = 0
+        if self._last_result is not None and not isinstance(self._last_result(self._last_result), SkipFileResult):
+            self._progress_length = 0
         self._add_progress_if_needed()
 
     def _add_progress_if_needed(self):
