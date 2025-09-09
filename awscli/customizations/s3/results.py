@@ -380,10 +380,13 @@ class ResultPrinter(BaseResultHandler):
             FinalTotalSubmissionsResult: self._clear_progress_if_no_more_expected_transfers,
         }
         self._last_result = None
+        self._results = []
 
     def __call__(self, result):
         """Print the progress of the ongoing transfer based on a result"""
-        self._last_result = result
+        if not isinstance(result, ProgressResult):
+            self._last_result = result
+            self._results.append(result)
         self._result_handler_map.get(type(result), self._print_noop)(
             result=result
         )
@@ -448,6 +451,9 @@ class ResultPrinter(BaseResultHandler):
         # Reset to zero because done statements are printed with new lines
         # meaning there are no carriage returns to take into account when
         # printing the next line.
+        # TODO alternative 2.2, instead of trying to print newline manually in the case
+        # last result is skip, we can try to guard resetting progress length if last result
+        # is Skip. This way, the progress length from the last progress update persists.
         self._progress_length = 0
         self._add_progress_if_needed()
 
@@ -455,12 +461,18 @@ class ResultPrinter(BaseResultHandler):
         LOGGER.debug("Remaining Progrss %s", self._has_remaining_progress())
         if self._has_remaining_progress():
             self._print_progress()
+            # self._print_to_out_file(f"results: {self._results}")
         elif isinstance(self._last_result, SkipFileResult):
+            pass
             # if the last result is a SkipFileResult, and there is no progress remaining,
             # then we must print a newline to guarantee that the program output does not
             # end with a carriage return, as that may cause incompatibility with certain
             # terminal programs.
-            self._print_to_out_file('\n')
+            # self._print_to_out_file('\n')
+            # self._print_to_out_file(f"results: {self._results}")
+        else:
+            # self._print_to_out_file(f"results: {self._results}")
+            pass
 
     def _print_progress(self, **kwargs):
         # Get all of the statistics in the correct form.
@@ -554,7 +566,12 @@ class ResultPrinter(BaseResultHandler):
         uni_print(statement, self._error_file)
 
     def _clear_progress_if_no_more_expected_transfers(self, **kwargs):
-        LOGGER.debug("Progress length %s Has remaining progress %s", self._progress_length, self._has_remaining_progress())
+        LOGGER.debug("Progress length %s", self._progress_length)
+        if isinstance(self._last_result, SkipFileResult):
+            LOGGER.debug('last result skip')
+            uni_print('\n', self._out_file)
+        else:
+            LOGGER.debug(f"last result: {self._last_result}")
         if self._progress_length and not self._has_remaining_progress():
             uni_print(self._adjust_statement_padding(''), self._out_file)
 
