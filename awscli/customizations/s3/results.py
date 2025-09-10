@@ -384,9 +384,8 @@ class ResultPrinter(BaseResultHandler):
 
     def __call__(self, result):
         """Print the progress of the ongoing transfer based on a result"""
-        if not isinstance(result, ProgressResult):
-            self._last_result = result
-            self._results.append(result)
+        self._last_result = result
+        # self._results.append(result)
         self._result_handler_map.get(type(result), self._print_noop)(
             result=result
         )
@@ -570,6 +569,8 @@ class ResultPrinter(BaseResultHandler):
         LOGGER.debug("Progress length %s", self._progress_length)
         if isinstance(self._last_result, SkipFileResult):
             LOGGER.debug('last result skip')
+            uni_print('\n', self._out_file)
+        elif isinstance(self._last_result, ProgressResult):
             uni_print('\n', self._out_file)
         else:
             LOGGER.debug(f"last result: {self._last_result}")
