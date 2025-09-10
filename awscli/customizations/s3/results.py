@@ -384,7 +384,8 @@ class ResultPrinter(BaseResultHandler):
 
     def __call__(self, result):
         """Print the progress of the ongoing transfer based on a result"""
-        self._last_result = result
+        if result in self._result_handler_map and not isinstance(result, FinalTotalSubmissionsResult):
+            self._last_result = result
         # self._results.append(result)
         self._result_handler_map.get(type(result), self._print_noop)(
             result=result
@@ -392,7 +393,7 @@ class ResultPrinter(BaseResultHandler):
 
     def _print_noop(self, result, **kwargs):
         # If the result does not have a handler, then do nothing with it.
-        pass
+        self._redisplay_progress(SkipFileResult)
 
     def _print_dry_run(self, result, **kwargs):
         statement = self.DRY_RUN_FORMAT.format(
@@ -409,7 +410,7 @@ class ResultPrinter(BaseResultHandler):
         )
         success_statement = self._adjust_statement_padding(success_statement)
         self._print_to_out_file(success_statement)
-        self._redisplay_progress()
+        self._redisplay_progress(SuccessResult)
 
     def _print_failure(self, result, **kwargs):
         failure_statement = self.FAILURE_FORMAT.format(
@@ -419,13 +420,13 @@ class ResultPrinter(BaseResultHandler):
         )
         failure_statement = self._adjust_statement_padding(failure_statement)
         self._print_to_error_file(failure_statement)
-        self._redisplay_progress()
+        self._redisplay_progress(FailureResult)
 
     def _print_warning(self, result, **kwargs):
         warning_statement = self.WARNING_FORMAT.format(message=result.message)
         warning_statement = self._adjust_statement_padding(warning_statement)
         self._print_to_error_file(warning_statement)
-        self._redisplay_progress()
+        self._redisplay_progress(WarningResult)
 
     def _print_error(self, result, **kwargs):
         self._flush_error_statement(
@@ -446,14 +447,17 @@ class ResultPrinter(BaseResultHandler):
             src=result.src, dest=result.dest
         )
 
-    def _redisplay_progress(self):
+    def _redisplay_progress(self, triggering_result):
+        # SuccessResult
+        # SkipFileResult
+        # SuccessResult
         # Reset to zero because done statements are printed with new lines
         # meaning there are no carriage returns to take into account when
         # printing the next line.
         # TODO alternative 2.2, instead of trying to print newline manually in the case
         # last result is skip, we can try to guard resetting progress length if last result
         # is Skip. This way, the progress length from the last progress update persists.
-        if self._last_result is not None and not isinstance(self._last_result(self._last_result), SkipFileResult):
+        if not isinstance(triggering_result, SkipFileResult):
             self._progress_length = 0
         self._add_progress_if_needed()
 
@@ -567,6 +571,7 @@ class ResultPrinter(BaseResultHandler):
 
     def _clear_progress_if_no_more_expected_transfers(self, **kwargs):
         LOGGER.debug("Progress length %s", self._progress_length)
+        LOGGER.debug(f"Last result {self._last_result}")
         if isinstance(self._last_result, SkipFileResult):
             LOGGER.debug('last result skip')
             uni_print('\n', self._out_file)
@@ -576,6 +581,7 @@ class ResultPrinter(BaseResultHandler):
             LOGGER.debug(f"last result: {self._last_result}")
         if self._progress_length and not self._has_remaining_progress():
             uni_print(self._adjust_statement_padding(''), self._out_file)
+            LOGGER.debug("PROGRESS CLEARED")
 
 
 class NoProgressResultPrinter(ResultPrinter):
