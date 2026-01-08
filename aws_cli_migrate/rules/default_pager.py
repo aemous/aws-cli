@@ -21,6 +21,8 @@ from aws_cli_migrate.rules.utils import has_aws_command_any_kind
 class DefaultPagerRule(LintRule):
     """Detects AWS CLI commands missing --no-cli-pager flag."""
 
+    _SUGGESTED_MANUAL_FIX = ""
+
     @property
     def name(self) -> str:
         return "pager-by-default"
@@ -78,16 +80,13 @@ class DefaultPagerRule(LintRule):
 
         findings = []
         for stmt in nodes:
-            original = stmt.text()
-            suggested = original + " --no-cli-pager"
-            edit = stmt.replace(suggested)
-
             findings.append(
                 LintFinding(
                     line_start=stmt.range().start.line,
                     line_end=stmt.range().end.line,
-                    edit=edit,
-                    original_text=original,
+                    edit=None,
+                    original_text=stmt.text(),
+                    suggested_manual_fix=self._SUGGESTED_MANUAL_FIX,
                     rule_name=self.name,
                     description=self.description,
                 )

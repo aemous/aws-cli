@@ -22,6 +22,8 @@ class Base64BinaryFormatRule(LintRule):
     """Detects any AWS CLI command that does not specify the --cli-binary-format. This mitigates
     the breaking change with how AWS CLI v2 treats binary parameters."""
 
+    _SUGGESTED_MANUAL_FIX = ""
+
     @property
     def name(self) -> str:
         return "binary-params-base64"
@@ -76,18 +78,13 @@ class Base64BinaryFormatRule(LintRule):
 
         findings = []
         for stmt in base64_broken_nodes:
-            original = stmt.text()
-            # To retain v1 behavior after migrating to v2, append
-            # --cli-binary-format raw-in-base64-out
-            suggested = original + " --cli-binary-format raw-in-base64-out"
-            edit = stmt.replace(suggested)
-
             findings.append(
                 LintFinding(
                     line_start=stmt.range().start.line,
                     line_end=stmt.range().end.line,
-                    edit=edit,
-                    original_text=original,
+                    edit=None,
+                    original_text=stmt.text(),
+                    suggested_manual_fix=self._SUGGESTED_MANUAL_FIX,
                     rule_name=self.name,
                     description=self.description,
                 )

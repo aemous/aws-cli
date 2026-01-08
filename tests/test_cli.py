@@ -68,21 +68,56 @@ class TestCLI:
             assert "Found" in captured.out
             assert "issue" in captured.out
 
-    def test_fix_mode(self, tmp_path, capsys):
-        """Test fix mode modifies the script."""
+    def test_fix_mode_only_manual_fixes(self, tmp_path, capsys):
+        """Test fix mode with only manual fixes."""
         script_file = tmp_path / "test.sh"
-        script_file.write_text(
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json"
-        )
+        original_script_content = "aws s3 cp s3://my-bucket ."
+        script_file.write_text(original_script_content)
 
         with patch("sys.argv", ["migrate-aws-cli", "--script", str(script_file), "--fix"]):
             main()
             fixed_content = script_file.read_text()
-            captured_out = capsys.readouterr()
-            # 1 command, 2 rules = 2 flags added
-            assert "--cli-binary-format" in fixed_content
-            assert "--no-cli-pager" in fixed_content
-            assert "Found 2 issue(s)." in captured_out.out
+            captured = capsys.readouterr()
+            # Script should remain unchanged.
+            assert fixed_content == original_script_content
+
+            # Display total number of issues.
+            assert "Found 2 issue(s)." in captured.out
+
+            # Should show manual review section
+            assert "2 issue(s) require manual review" in captured.out
+            assert "MANUAL REVIEW REQUIRED" in captured.out
+            assert "This issue requires manual intervention" in captured.out
+
+    def test_fix_mode_with_manual_review(self, tmp_path, capsys):
+        """Test fix mode displays manual review findings after applying fixes."""
+        script_file = tmp_path / "test.sh"
+        script_file.write_text(
+            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json\n"
+            "aws ecr get-login --region us-west-2\n"
+            "aws s3 cp s3://my-bucket s3://my-bucket2"
+        )
+
+        with patch("sys.argv", ["migrate-aws-cli", "--script", str(script_file), "--fix"]):
+            main()
+            captured = capsys.readouterr()
+
+            # Should show fix was applied
+            assert f"Applied 1 fix(es) to: {str(tmp_path)}" in captured.out
+
+            # Should show manual review section
+            assert "5 issue(s) require manual review" in captured.out
+            assert "MANUAL REVIEW REQUIRED" in captured.out
+            assert "This issue requires manual intervention" in captured.out
+
+            # Script should have auto-fixes applied but manual review command unchanged
+            fixed_content = script_file.read_text()
+            assert "--copy-props none" in fixed_content
+            assert "aws ecr get-login" in fixed_content
+            assert (
+                "aws secretsmanager put-secret-value --secret-id secret1213 "
+                "--secret-binary file://data.json\n" in fixed_content
+            )
 
     def test_fix_mode_no_issues_found(self, tmp_path, capsys):
         """Test fix mode when no issues are found."""
@@ -96,10 +131,8 @@ class TestCLI:
             assert fixed_content == "echo 'foobar'"
             assert "No issues found" in captured_out.out
 
-    def test_fix_mode_multiple_lint_rules_per_command(self, tmp_path, capsys):
-        """Test fix mode in the case that multiple linting rules have findings
-        for a single command.
-        """
+    def test_fix_mode_hidden_aliases(self, tmp_path, capsys):
+        """Test fix mode in the case of using hidden aliases in two different commands."""
         script_file = tmp_path / "test.sh"
         script_file.write_text(
             "aws lambda publish-version --function-name myfunction --code-sha256 abc123\n"
@@ -112,23 +145,25 @@ class TestCLI:
             captured = capsys.readouterr()
 
             # Should show fix was applied
-            assert f"Applied 5 fix(es) to: {str(tmp_path)}" in captured.out
+            assert f"Applied 1 fix(es) to: {str(tmp_path)}" in captured.out
             # The number of lines should remain the same after applying fixes
             assert len(script_file.read_text().splitlines()) == 2
 
+            # Should show manual review section
+            assert "4 issue(s) require manual review" in captured.out
+            assert "MANUAL REVIEW REQUIRED" in captured.out
+            assert "This issue requires manual intervention" in captured.out
+            assert captured.out.count("binary-params-base64 [MANUAL REVIEW REQUIRED]") == 2
+            assert captured.out.count("pager-by-default [MANUAL REVIEW REQUIRED]") == 2
+
             # The hidden alias must not be present in the modified script
             assert "--ec-2-tag-set" not in script_file.read_text()
-
-            # The no-pager flag should appear twice in the modified script, one for each command.
-            assert script_file.read_text().count("--no-cli-pager") == 2
 
     def test_output_mode(self, tmp_path):
         """Test output mode creates new file."""
         script_file = tmp_path / "test.sh"
         output_file = tmp_path / "output.sh"
-        script_file.write_text(
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json"
-        )
+        script_file.write_text("aws s3 cp s3://my-bucket s3://my-bucket2")
 
         with patch(
             "sys.argv",
@@ -137,18 +172,20 @@ class TestCLI:
             main()
             assert output_file.exists()
             content = output_file.read_text()
-            # 1 command, 2 rules = 2 flags added
-            assert "--cli-binary-format" in content
-            assert "--no-cli-pager" in content
+            # 1 command, 1 applicable rule = 1 flag added
+            assert "--copy-props none" in content
 
     def test_interactive_mode_accept_all(self, tmp_path):
-        """Test interactive mode with 'y' to accept all changes."""
+        """Test interactive mode with 'y' to accept all changes, and "n" to proceed through
+        all manual-review issues.
+        """
         script_file = tmp_path / "test.sh"
         output_file = tmp_path / "output.sh"
         script_file.write_text(
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json\n"
-            "aws kinesis put-record --stream-name samplestream --data file://data "
-            "--partition-key samplepartitionkey"
+            "aws deploy create-deployment-group --application-name myapp "
+            "--deployment-group-name mygroup --ec-2-tag-set file://tags.json\n"
+            "aws s3 cp s3://my-bucket s3://my-bucket2 --recursive\n"
+            "aws cloudformation deploy"
         )
 
         with patch(
@@ -162,13 +199,13 @@ class TestCLI:
                 str(output_file),
             ],
         ):
-            with patch("builtins.input", side_effect=["y", "y", "y", "y"]):
+            with patch("builtins.input", side_effect=["y", "y", "y", "n", "n", "n", "n", "n", "n"]):
                 main()
                 fixed_content = output_file.read_text()
-                print(fixed_content)
-                # 2 commands, 2 rules = 4 findings, so 2 of each flag
-                assert fixed_content.count("--cli-binary-format") == 2
-                assert fixed_content.count("--no-cli-pager") == 2
+                # 3 commands, 1 applicable rule each = 3 findings
+                assert fixed_content.count("--ec2-tag-set") == 1
+                assert fixed_content.count("--copy-props none") == 1
+                assert fixed_content.count("--fail-on-empty-changeset") == 1
 
     def test_interactive_mode_reject_all(self, tmp_path, capsys):
         """Test interactive mode with 'n' to reject all changes."""
@@ -187,9 +224,9 @@ class TestCLI:
         script_file = tmp_path / "test.sh"
         output_file = tmp_path / "output.sh"
         script_file.write_text(
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json\n"
-            "aws kinesis put-record --stream-name samplestream --data file://data "
-            "--partition-key samplepartitionkey"
+            "aws deploy create-deployment-group --application-name myapp "
+            "--deployment-group-name mygroup --ec-2-tag-set file://tags.json\n"
+            "aws s3 cp s3://my-bucket s3://my-bucket2 --recursive"
         )
 
         with patch(
@@ -206,9 +243,10 @@ class TestCLI:
             with patch("builtins.input", return_value="u"):
                 main()
                 fixed_content = output_file.read_text()
-                # 2 commands, 2 rules = 4 findings, so 2 of each flag
-                assert fixed_content.count("--cli-binary-format") == 2
-                assert fixed_content.count("--no-cli-pager") == 2
+                # 2 commands, 1 applicable rule each = 2 findings.
+                assert fixed_content.count("--ec2-tag-set") == 1
+                assert fixed_content.count("--ec-2-tag-set") == 0
+                assert fixed_content.count("--copy-props none") == 1
 
     def test_interactive_mode_update_all_summarizes_unseen_manual_issues(self, tmp_path, capsys):
         """Test interactive mode with 'u' summarizes issues that are not auto-fixable that were
@@ -217,8 +255,7 @@ class TestCLI:
         script_file = tmp_path / "test.sh"
         output_file = tmp_path / "output.sh"
         script_file.write_text(
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json\n"
-            "aws ecr get-login"
+            "aws s3 cp s3://my-bucket s3://my-bucket2 --recursive\naws ecr get-login"
         )
 
         with patch(
@@ -236,20 +273,14 @@ class TestCLI:
                 main()
                 fixed_content = output_file.read_text()
                 captured = capsys.readouterr()
-                # 1 auto-fixable command, 2 applicable rules = 2 auto-fixes.
-                assert fixed_content.count("--cli-binary-format") == 1
-                assert fixed_content.count("--no-cli-pager") == 1
-                assert "️1 issue(s) require manual review:" in captured.out
+                assert fixed_content.count("--copy-props none") == 1
+                assert "️3 issue(s) require manual review:" in captured.out
 
     def test_interactive_mode_save_and_exit(self, tmp_path):
         """Test interactive mode with 's' to save and exit."""
         script_file = tmp_path / "test.sh"
         output_file = tmp_path / "output.sh"
-        script_file.write_text(
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json\n"
-            "aws kinesis put-record --stream-name samplestream --data file://data "
-            "--partition-key samplepartitionkey"
-        )
+        script_file.write_text("aws cloudformation deploy\naws cloudformation deploy")
 
         with patch(
             "sys.argv",
@@ -265,10 +296,9 @@ class TestCLI:
             with patch("builtins.input", side_effect=["y", "s"]):
                 main()
                 fixed_content = output_file.read_text()
-                # Only first change should be applied since we pressed 's' on the second
-                # First finding is binary-params-base64 for cmd1
-                assert "--cli-binary-format" in fixed_content
-                assert fixed_content.count("--cli-binary-format") == 1
+                # Only first change should be applied since we pressed 's' on the second finding.
+                # First finding is deploy-empty-changeset for the first command.
+                assert fixed_content.count("--fail-on-empty-changeset") == 1
 
     def test_interactive_mode_quit(self, tmp_path):
         """Test interactive mode with 'q' to quit without saving."""
@@ -306,38 +336,13 @@ class TestCLI:
             assert "This issue requires manual intervention" in captured.out
             assert "get-login-password" in captured.out
 
-    def test_fix_mode_with_manual_review(self, tmp_path, capsys):
-        """Test fix mode displays manual review findings after applying fixes."""
-        script_file = tmp_path / "test.sh"
-        script_file.write_text(
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json\n"
-            "aws ecr get-login --region us-west-2"
-        )
-
-        with patch("sys.argv", ["migrate-aws-cli", "--script", str(script_file), "--fix"]):
-            main()
-            captured = capsys.readouterr()
-
-            # Should show fix was applied
-            assert f"Applied 2 fix(es) to: {str(tmp_path)}" in captured.out
-
-            # Should show manual review section
-            assert "issue(s) require manual review" in captured.out
-            assert "MANUAL REVIEW REQUIRED" in captured.out
-            assert "This issue requires manual intervention" in captured.out
-
-            # Script should have auto-fixes applied but manual review command unchanged
-            fixed_content = script_file.read_text()
-            assert "--cli-binary-format" in fixed_content
-            assert "--no-cli-pager" in fixed_content
-            assert "aws ecr get-login" in fixed_content
-
     def test_interactive_mode_with_manual_review(self, tmp_path, capsys):
         """Test interactive mode handles manual review findings."""
         script_file = tmp_path / "test.sh"
         output_file = tmp_path / "output.sh"
         script_file.write_text(
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json\n"
+            "aws s3 cp s3://my-bucket s3://my-bucket2 --recursive\n"
+            "aws cloudformation deploy\n"
             "aws ecr get-login --region us-west-2"
         )
 
@@ -353,7 +358,7 @@ class TestCLI:
             ],
         ):
             # Accept first two auto-fixable findings, then 'n' for manual review finding
-            with patch("builtins.input", side_effect=["y", "y", "n"]):
+            with patch("builtins.input", side_effect=["y", "y", "n", "n", "n", "n", "n"]):
                 main()
                 captured = capsys.readouterr()
 
@@ -361,24 +366,22 @@ class TestCLI:
                 assert "MANUAL REVIEW REQUIRED" in captured.out
                 assert "This issue requires manual intervention" in captured.out
 
-                # Should prompt with [n]ext, [s]ave and exit, [q]uit for manual review
-                # (not [y]es, [n]o, [u]pdate all, etc.)
-
                 # Output should have auto-fixes but not manual review changes
                 fixed_content = output_file.read_text()
-                assert "--cli-binary-format" in fixed_content
-                assert "--no-cli-pager" in fixed_content
-                assert "aws ecr get-login" in fixed_content
+                assert fixed_content == (
+                    "aws s3 cp s3://my-bucket s3://my-bucket2 --recursive --copy-props none\n"
+                    "aws cloudformation deploy --fail-on-empty-changeset\n"
+                    "aws ecr get-login --region us-west-2"
+                )
 
     def test_interactive_mode_manual_review_save_and_exit(self, tmp_path):
         """Test interactive mode with 's' on manual review finding."""
         script_file = tmp_path / "test.sh"
         output_file = tmp_path / "output.sh"
         script_file.write_text(
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json\n"
+            "aws s3 cp s3://my-bucket s3://my-bucket2 --recursive\n"
             "aws ecr get-login --region us-west-2\n"
-            "aws kinesis put-record --stream-name samplestream "
-            "--data file://data --partition-key samplepartitionkey"
+            "aws cloudformation deploy"
         )
 
         with patch(
@@ -392,18 +395,20 @@ class TestCLI:
                 str(output_file),
             ],
         ):
-            # Accept all 4 auto-fixable findings, then 's' on manual review finding (5th)
+            # Accept all 2 auto-fixable findings, then 's' on manual review finding (3rd)
             # This should save and exit without processing any remaining findings
-            with patch("builtins.input", side_effect=["y", "y", "y", "y", "s"]):
+            with patch("builtins.input", side_effect=["y", "y", "s"]):
                 main()
 
-                # Output should have all auto-fixes applied
                 fixed_content = output_file.read_text()
-                assert fixed_content.count("--cli-binary-format") == 2
-                assert fixed_content.count("--no-cli-pager") == 2
 
-                # Manual review command should be unchanged
-                assert "aws ecr get-login" in fixed_content
+                # Output should have all auto-fixes applied, and manual-review command
+                # should be left unchanged.
+                assert fixed_content == (
+                    "aws s3 cp s3://my-bucket s3://my-bucket2 --recursive --copy-props none\n"
+                    "aws ecr get-login --region us-west-2\n"
+                    "aws cloudformation deploy --fail-on-empty-changeset"
+                )
 
                 # Should have saved and exited
                 assert output_file.exists()
@@ -449,12 +454,13 @@ class TestCLI:
             # Should find issues since 'aws' is a valid AWS CLI command
             assert "Found 2 issue" in captured.out
 
-    def test_interactive_mode_s3_cp_ls(self, tmp_path, capsys):
-        """Test interactive mode with s3 cp and ls commands."""
+    def test_interactive_mode_accept_then_update_all(self, tmp_path, capsys):
+        """Test interactive mode with user manually accepting a finding then auto-updating all."""
         script_file = tmp_path / "test.sh"
         output_file = tmp_path / "output.sh"
         script_file.write_text(
             "aws s3 cp s3://source-bucket/file.txt s3://dest-bucket/file.txt\n"
+            "aws cloudformation deploy\n"
             "aws s3 ls s3://my-bucket"
         )
 
@@ -473,7 +479,9 @@ class TestCLI:
                 main()
                 fixed_content = output_file.read_text()
                 captured = capsys.readouterr()
-                assert fixed_content.count("--cli-binary-format") == 2
-                assert fixed_content.count("--no-cli-pager") == 2
-                assert fixed_content.count("--copy-props none") == 1
-                assert "Found 5 issue" in captured.out
+                assert fixed_content == (
+                    "aws s3 cp s3://mybucket/file.txt s3://mybucket2/file.txt --copy-props none\n"
+                    "aws cloudformation deploy --fail-on-empty-changeset\n"
+                    "aws s3 ls s3://my-bucket"
+                )
+                assert "Found 8 issue" in captured.out

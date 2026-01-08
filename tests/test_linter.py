@@ -12,7 +12,9 @@
 # language governing permissions and limitations under the License.
 from aws_cli_migrate import linter
 from aws_cli_migrate.rules.binary_params_base64 import Base64BinaryFormatRule
+from aws_cli_migrate.rules.deploy_empty_changeset import DeployEmptyChangesetRule
 from aws_cli_migrate.rules.ecr_get_login import EcrGetLoginRule
+from aws_cli_migrate.rules.s3_copies import S3CopyRule
 
 
 class TestLinter:
@@ -31,14 +33,13 @@ class TestLinter:
 
     def test_apply_fixes(self):
         """Test that fixes are applied correctly."""
-        script = "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json"
+        script = "aws s3 cp s3://my-bucket s3://my-bucket2 --recursive"
         ast = linter.parse(script)
-        findings_with_rules = linter.lint(ast, [Base64BinaryFormatRule()])
+        findings_with_rules = linter.lint(ast, [S3CopyRule()])
         findings = [f for f, _ in findings_with_rules]
         fixed = linter.apply_fixes(ast, findings)
 
-        assert "--cli-binary-format raw-in-base64-out" in fixed
-        assert "file://data.json" in fixed
+        assert "aws s3 cp s3://my-bucket s3://my-bucket2 --recursive --copy-props none" == fixed
 
     def test_multiple_issues(self):
         """Test linter with multiple issues."""
@@ -80,12 +81,9 @@ class TestLinter:
 
     def test_mixed_fixable_and_manual_review(self):
         """Test linter with both fixable and manual review findings."""
-        script = (
-            "aws secretsmanager put-secret-value --secret-id secret1213 --secret-binary file://data.json\n"
-            "aws ecr get-login --region us-west-2"
-        )
+        script = "aws cloudformation deploy\naws ecr get-login --region us-west-2"
         ast = linter.parse(script)
-        findings_with_rules = linter.lint(ast, [Base64BinaryFormatRule(), EcrGetLoginRule()])
+        findings_with_rules = linter.lint(ast, [DeployEmptyChangesetRule(), EcrGetLoginRule()])
 
         assert len(findings_with_rules) == 2
 
@@ -100,8 +98,10 @@ class TestLinter:
         assert manual_finding.edit is None
         assert manual_finding.suggested_manual_fix is not None
 
-        # Apply fixes should only fix the fixable finding
+        # Apply fixes should only change the fixable finding
         findings = [f for f, _ in findings_with_rules]
         fixed = linter.apply_fixes(ast, findings)
-        assert "--cli-binary-format" in fixed
-        assert "aws ecr get-login" in fixed  # Manual review command unchanged
+        assert fixed == (
+            "aws cloudformation deploy --fail-on-empty-changeset\n"
+            "aws ecr get-login --region us-west-2"
+        )

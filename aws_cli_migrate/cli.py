@@ -508,12 +508,12 @@ def main():
     script_content = script_path.read_text()
 
     rules = [
-        Base64BinaryFormatRule(),
-        DefaultPagerRule(),
         S3CopyRule(),
         DeployEmptyChangesetRule(),
         *create_all_hidden_alias_rules(),
         # Rules that do not automatically generate fixes go last
+        Base64BinaryFormatRule(),
+        DefaultPagerRule(),
         EcrGetLoginRule(),
         CLIInputJSONRule(),
     ]

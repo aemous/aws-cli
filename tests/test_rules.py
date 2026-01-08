@@ -22,7 +22,7 @@ from aws_cli_migrate.rules.s3_copies import S3CopyRule
 
 
 class TestBase64BinaryFormatRule:
-    """Test cases for Base64BinaryFormatRule."""
+    """Test cases for Base64BinaryFormatRule (manual review only)."""
 
     def test_rule_properties(self):
         """Test rule description."""
@@ -37,7 +37,9 @@ class TestBase64BinaryFormatRule:
         findings = rule.check(root)
 
         assert len(findings) == 1
-        assert "--cli-binary-format" in findings[0].edit.inserted_text
+        assert findings[0].edit is None
+        assert findings[0].suggested_manual_fix is not None
+        assert findings[0].auto_fixable is False
 
     def test_no_detection_with_flag(self):
         """Test no detection when flag is present."""
@@ -59,11 +61,13 @@ class TestBase64BinaryFormatRule:
         findings = rule.check(root)
 
         assert len(findings) == 1
-        assert "--cli-binary-format" in findings[0].edit.inserted_text
+        assert findings[0].edit is None
+        assert findings[0].suggested_manual_fix is not None
+        assert findings[0].auto_fixable is False
 
 
 class TestDefaultPagerRule:
-    """Test cases for DefaultPagerRule."""
+    """Test cases for DefaultPagerRule (manual review only)."""
 
     def test_rule_properties(self):
         """Test rule description."""
@@ -78,7 +82,9 @@ class TestDefaultPagerRule:
         findings = rule.check(root)
 
         assert len(findings) == 1
-        assert "--no-cli-pager" in findings[0].edit.inserted_text
+        assert findings[0].edit is None
+        assert findings[0].suggested_manual_fix is not None
+        assert findings[0].auto_fixable is False
 
     def test_no_detection_with_flag(self):
         """Test no detection when flag is present."""
@@ -97,6 +103,10 @@ class TestDefaultPagerRule:
         findings = rule.check(root)
 
         assert len(findings) == 2
+        for finding in findings:
+            assert finding.edit is None
+            assert finding.suggested_manual_fix is not None
+            assert finding.auto_fixable is False
 
     def test_detects_ecr_describe_repositories(self):
         """Test detection for ecr describe-repositories command."""
@@ -106,7 +116,9 @@ class TestDefaultPagerRule:
         findings = rule.check(root)
 
         assert len(findings) == 1
-        assert "--no-cli-pager" in findings[0].edit.inserted_text
+        assert findings[0].edit is None
+        assert findings[0].suggested_manual_fix is not None
+        assert findings[0].auto_fixable is False
 
 
 class TestDeployEmptyChangesetRule:
