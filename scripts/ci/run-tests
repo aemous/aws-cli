@@ -52,7 +52,7 @@ def process_args(args):
         test_args += f'--junit-xml={args.junit_xml_path} '
     if args.markers:
         test_args += f'-m {args.markers} '
-    test_args += '--numprocesses=auto --dist=loadfile --maxprocesses=4 '
+    test_args += '-v --numprocesses=auto --dist=loadfile --maxprocesses=4 '
     dirs = " ".join(args.test_dirs)
 
     return runner, test_args, dirs
