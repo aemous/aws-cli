@@ -272,7 +272,7 @@ class TestCPCommand(BaseCPCommandTest):
                 "LastModified": "00:00:00Z",
                 'ETag': '"foo-1"',
             },
-            {'ETag': '"foo-1"', 'Body': BytesIO(b'foo')},
+            self.get_object_response(),
         ]
         cmdline = '%s s3://bucket/key.txt %s' % (
             self.prefix,
@@ -709,7 +709,7 @@ class TestCPCommand(BaseCPCommandTest):
                 "LastModified": "00:00:00Z",
                 "ETag": '"foo-1"',
             },
-            {'ETag': '"foo-1"', 'Body': BytesIO(b'foo')},
+            self.get_object_response(),
         ]
         with mock.patch('os.utime') as mock_utime:
             mock_utime.side_effect = OSError(1, '')
@@ -731,7 +731,7 @@ class TestCPCommand(BaseCPCommandTest):
                 ],
                 'CommonPrefixes': [],
             },
-            {'ETag': '"foo-1"', 'Body': BytesIO(b'foo')},
+            self.get_object_response(),
         ]
         cmdline = (
             '%s s3://bucket/foo %s --recursive --force-glacier-transfer'
@@ -1251,11 +1251,7 @@ class TestCPCommand(BaseCPCommandTest):
         self.parsed_responses = [
             self.head_object_response(),
             # Mocked GetObject response with a checksum algorithm specified
-            {
-                'ETag': 'foo-1',
-                'ChecksumCRC32': 'Tq0H4g==',
-                'Body': BytesIO(b'foo'),
-            },
+            self.get_object_response(ChecksumCRC32='Tq0H4g=='),
         ]
         cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir} --checksum-mode ENABLED'
         self.run_cmd(cmdline, expected_rc=0)
@@ -1268,11 +1264,7 @@ class TestCPCommand(BaseCPCommandTest):
         self.parsed_responses = [
             self.head_object_response(),
             # Mocked GetObject response with a checksum algorithm specified
-            {
-                'ETag': 'foo-1',
-                'ChecksumCRC32C': 'checksum',
-                'Body': BytesIO(b'foo'),
-            },
+            self.get_object_response(ChecksumCRC32='checksum'),
         ]
         cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir} --checksum-mode ENABLED'
         self.run_cmd(cmdline, expected_rc=0)
@@ -1369,16 +1361,9 @@ class TestStreamingCPCommand(BaseAWSCommandParamsTest):
         self.parsed_responses = [
             {
                 "AcceptRanges": "bytes",
-                "LastModified": "Tue, 12 Jul 2016 21:26:07 GMT",
-                "ContentLength": 4,
-                "ETag": '"d3b07384d113edec49eaa6238ad5ff00"',
                 "Metadata": {},
                 "ContentType": "binary/octet-stream",
-            },
-            {
-                "AcceptRanges": "bytes",
-                "Metadata": {},
-                "ContentType": "binary/octet-stream",
+                "ContentRange": 'bytes 0-3/4',
                 "ContentLength": 4,
                 "ETag": '"d3b07384d113edec49eaa6238ad5ff00"',
                 "LastModified": "Tue, 12 Jul 2016 21:26:07 GMT",
@@ -1390,9 +1375,9 @@ class TestStreamingCPCommand(BaseAWSCommandParamsTest):
         self.assertEqual(stdout, 'foo\n')
 
         # Ensures no extra operations were called
-        self.assertEqual(len(self.operations_called), 2)
+        self.assertEqual(len(self.operations_called), 1)
         ops = [op[0].name for op in self.operations_called]
-        expected_ops = ['HeadObject', 'GetObject']
+        expected_ops = ['GetObject']
         self.assertEqual(ops, expected_ops)
 
     def test_streaming_download_error(self):
@@ -1411,7 +1396,7 @@ class TestStreamingCPCommand(BaseAWSCommandParamsTest):
         _, stderr, _ = self.run_cmd(command, expected_rc=1)
         error_message = (
             'An error occurred (NoSuchBucket) when calling '
-            'the HeadObject operation: The specified bucket does not exist'
+            'the GetObject operation: The specified bucket does not exist'
         )
         self.assertIn(error_message, stderr)
 
@@ -1558,7 +1543,10 @@ class TestCpCommandWithRequesterPayer(BaseCPCommandTest):
                     'mybucket', 'mykey', RequestPayer='requester'
                 ),
                 self.get_object_request(
-                    'mybucket', 'mykey', RequestPayer='requester'
+                    'mybucket',
+                    'mykey',
+                    RequestPayer='requester',
+                    Range=mock.ANY,
                 ),
             ]
         )
@@ -1568,10 +1556,16 @@ class TestCpCommandWithRequesterPayer(BaseCPCommandTest):
             self.prefix,
             self.files.rootdir,
         )
+
         self.parsed_responses = [
-            self.head_object_response(ContentLength=10 * (1024**2)),
-            self.get_object_response(),
-            self.get_object_response(),
+            self.head_object_response(ContentLength=10 * MB),
+            self.get_object_response(
+                ContentLength=10 * MB,
+                ContentRange=f'bytes 0-{self.multipart_threshold - 1}/{10 * MB}'
+            ),
+            self.get_object_response(
+                ContentLength=10 * MB,
+                ContentRange=f'bytes {self.multipart_threshold}-{self.multipart_threshold - 1}/{10 * MB}'),
         ]
 
         self.run_cmd(cmdline, expected_rc=0)
@@ -1585,7 +1579,6 @@ class TestCpCommandWithRequesterPayer(BaseCPCommandTest):
                     'mykey',
                     Range=mock.ANY,
                     RequestPayer='requester',
-                    IfMatch='"foo-1"',
                 ),
                 self.get_object_request(
                     'mybucket',
@@ -1613,7 +1606,10 @@ class TestCpCommandWithRequesterPayer(BaseCPCommandTest):
                     'mybucket', RequestPayer='requester'
                 ),
                 self.get_object_request(
-                    'mybucket', 'mykey', RequestPayer='requester'
+                    'mybucket',
+                    'mykey',
+                    RequestPayer='requester',
+                    Range=mock.ANY,
                 ),
             ]
         )
@@ -1829,7 +1825,11 @@ class TestAccesspointCPCommand(BaseCPCommandTest):
         self.assert_operations_called(
             [
                 self.head_object_request(self.accesspoint_arn, 'mykey'),
-                self.get_object_request(self.accesspoint_arn, 'mykey'),
+                self.get_object_request(
+                    self.accesspoint_arn,
+                    'mykey',
+                    Range=mock.ANY
+                ),
             ]
         )
 
@@ -1846,7 +1846,11 @@ class TestAccesspointCPCommand(BaseCPCommandTest):
         self.assert_operations_called(
             [
                 self.list_objects_request(self.accesspoint_arn),
-                self.get_object_request(self.accesspoint_arn, 'mykey'),
+                self.get_object_request(
+                    self.accesspoint_arn,
+                    'mykey',
+                    Range=mock.ANY,
+                ),
             ]
         )
 

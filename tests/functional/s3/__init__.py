@@ -92,8 +92,16 @@ class BaseS3TransferCommandTest(BaseAWSCommandParamsTest):
             contents.append(content)
         return {'Contents': contents, 'CommonPrefixes': []}
 
-    def get_object_response(self):
-        return {'ETag': '"foo-1"', 'Body': BytesIO(b'foo')}
+    def get_object_response(self, **override_kwargs):
+        content = {
+            'ETag': '"foo-1"',
+            'Body': BytesIO(b'foo'),
+            'ContentLength': 3,
+            'ContentRange': 'bytes 0-2/3'
+        }
+        if override_kwargs:
+            content.update(override_kwargs)
+        return content
 
     def copy_object_response(self):
         return self.empty_response()

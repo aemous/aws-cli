@@ -135,7 +135,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
                 "ETag": '"foo-1"',
             },
             # Response for GetObject
-            {'ETag': '"foo-1"', 'Body': BytesIO(b'foo')},
+            self.get_object_response(),
             # Response for DeleteObject
             {},
         ]
@@ -143,29 +143,21 @@ class TestMvCommand(BaseS3TransferCommandTest):
         self.run_cmd(cmdline, expected_rc=0)
         self.assert_operations_called(
             [
-                (
-                    'HeadObject',
-                    {
-                        'Bucket': 'mybucket',
-                        'Key': 'mykey',
-                        'RequestPayer': 'requester',
-                    },
+                self.head_object_request(
+                    'mybucket',
+                    'mykey',
+                    RequestPayer='requester',
                 ),
-                (
-                    'GetObject',
-                    {
-                        'Bucket': 'mybucket',
-                        'Key': 'mykey',
-                        'RequestPayer': 'requester',
-                    },
+                self.get_object_request(
+                    'mybucket',
+                    'mykey',
+                    RequestPayer='requester',
+                    Range=mock.ANY,
                 ),
-                (
-                    'DeleteObject',
-                    {
-                        'Bucket': 'mybucket',
-                        'Key': 'mykey',
-                        'RequestPayer': 'requester',
-                    },
+                self.delete_object_request(
+                    'mybucket',
+                    'mykey',
+                    RequestPayer='requester',
                 ),
             ]
         )
@@ -309,11 +301,7 @@ class TestMvCommand(BaseS3TransferCommandTest):
         self.parsed_responses = [
             self.head_object_response(),
             # Mocked GetObject response with a checksum algorithm specified
-            {
-                'ETag': 'foo-1',
-                'ChecksumCRC32': 'checksum',
-                'Body': BytesIO(b'foo'),
-            },
+            self.get_object_response(ChecksumCRC32='checksum'),
             self.delete_object_response(),
         ]
         cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir} --checksum-mode ENABLED'

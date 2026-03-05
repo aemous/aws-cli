@@ -81,10 +81,7 @@ class TestSyncCommand(BaseS3TransferCommandTest):
                     }
                 ],
             },
-            {
-                'ETag': '"c8afdb36c52cf4727836669019e69222-"',
-                'Body': BytesIO(b'foo'),
-            },
+            self.get_object_response(),
         ]
         self.run_cmd(cmdline, expected_rc=0)
         # Make sure the file now exists.
@@ -131,7 +128,7 @@ class TestSyncCommand(BaseS3TransferCommandTest):
                 ],
                 'CommonPrefixes': [],
             },
-            {'ETag': '"foo-1"', 'Body': BytesIO(b'foo')},
+            self.get_object_response(),
         ]
         cmdline = '%s s3://bucket/foo %s --force-glacier-transfer' % (
             self.prefix,
@@ -383,7 +380,11 @@ class TestSyncCommand(BaseS3TransferCommandTest):
         self.assert_operations_called(
             [
                 self.list_objects_request(accesspoint_arn),
-                self.get_object_request(accesspoint_arn, 'mykey'),
+                self.get_object_request(
+                    accesspoint_arn,
+                    'mykey',
+                    Range=mock.ANY,
+                ),
             ]
         )
 
@@ -492,11 +493,7 @@ class TestSyncCommand(BaseS3TransferCommandTest):
         self.parsed_responses = [
             self.list_objects_response(['bucket']),
             # Mocked GetObject response with a checksum algorithm specified
-            {
-                'ETag': 'foo-1',
-                'ChecksumSHA1': 'checksum',
-                'Body': BytesIO(b'foo'),
-            },
+            self.get_object_response(ChecksumSHA1='checksum'),
         ]
         cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir} --checksum-mode ENABLED'
         self.run_cmd(cmdline, expected_rc=0)
@@ -510,11 +507,7 @@ class TestSyncCommand(BaseS3TransferCommandTest):
         self.parsed_responses = [
             self.list_objects_response(['bucket']),
             # Mocked GetObject response with a checksum algorithm specified
-            {
-                'ETag': 'foo-1',
-                'ChecksumSHA256': 'checksum',
-                'Body': BytesIO(b'foo'),
-            },
+            self.get_object_response(ChecksumSHA256='checksum'),
         ]
         cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir} --checksum-mode ENABLED'
         self.run_cmd(cmdline, expected_rc=0)
@@ -528,11 +521,7 @@ class TestSyncCommand(BaseS3TransferCommandTest):
         self.parsed_responses = [
             self.list_objects_response(['bucket']),
             # Mocked GetObject response with a checksum algorithm specified
-            {
-                'ETag': 'foo-1',
-                'ChecksumCRC64NVME': 'checksum',
-                'Body': BytesIO(b'foo'),
-            },
+            self.get_object_response(ChecksumCRC64NVME='checksum'),
         ]
         cmdline = f'{self.prefix} s3://bucket/foo {self.files.rootdir} --checksum-mode ENABLED'
         self.run_cmd(cmdline, expected_rc=0)
