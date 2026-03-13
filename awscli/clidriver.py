@@ -263,12 +263,10 @@ class CLIDriver:
         self.session.register(
             'before-endpoint-resolution',
             self._er_log_start_time,
-            unique_id='benchmark_eresolution'
         )
         self.session.register(
             'after-endpoint-resolution',
             self._er_log_end_time,
-            unique_id='benchmark_eresolution_after'
         )
 
     def _er_log_start_time(self, builtins, model, params, context, **kwargs):
