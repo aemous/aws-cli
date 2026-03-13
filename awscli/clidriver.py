@@ -17,6 +17,8 @@ import os
 import platform
 import re
 import sys
+import time
+from pathlib import Path
 
 import botocore.session
 import distro
@@ -256,6 +258,26 @@ class CLIDriver:
         self._command_table = None
         self._argument_table = None
         self.alias_loader = AliasLoader()
+        self._er_start_time = None
+        self._er_end_time = None
+        self.session.register(
+            'before-endpoint-resolution',
+            self._er_log_start_time,
+            unique_id='benchmark_eresolution'
+        )
+        self.session.register(
+            'after-endpoint-resolution',
+            self._er_log_end_time,
+            unique_id='benchmark_eresolution_after'
+        )
+
+    def _er_log_start_time(self, builtins, model, params, context, **kwargs):
+        if self._er_start_time is None:
+            self._er_start_time = time.time_ns()
+
+    def _er_log_end_time(self, **kwargs):
+        if self._er_end_time is None:
+            self._er_end_time = time.time_ns()
 
     def _update_config_chain(self):
         config_store = self.session.get_component('config_store')
@@ -547,7 +569,9 @@ class CLIDriver:
             self._emit_session_event(parsed_args)
             HISTORY_RECORDER.record('CLI_VERSION', self._cli_version(), 'CLI')
             HISTORY_RECORDER.record('CLI_ARGUMENTS', args, 'CLI')
-            return command_table[parsed_args.command](remaining, parsed_args)
+            rc = command_table[parsed_args.command](remaining, parsed_args)
+
+            return rc
         except BaseException as e:
             # when --version action executed default argparser prints out
             # version string and calls sys.exit(0)
@@ -560,6 +584,10 @@ class CLIDriver:
                 stderr=get_stderr_text_writer(),
                 parsed_globals=parsed_args,
             )
+        finally:
+            if self._er_end_time is not None and self._er_start_time is not None:
+                filename = str(time.time_ns())
+                Path(filename).write_text(str(self._er_end_time - self._er_start_time))
 
     def _emit_session_event(self, parsed_args):
         # This event is guaranteed to run after the session has been
