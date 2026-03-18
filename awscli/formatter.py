@@ -94,7 +94,7 @@ class FullyBufferedFormatter(Formatter):
             # flush is needed to avoid the "close failed in file object
             # destructor" in python2.x (see http://bugs.python.org/issue11380).
             self._flush_stream(stream)
-            return after_paginate - before_paginate
+        return after_paginate - before_paginate
 
 
 class JSONFormatter(FullyBufferedFormatter):
