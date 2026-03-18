@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 import logging
+import time
 from datetime import datetime
 
 from botocore.compat import json
@@ -64,6 +65,8 @@ class Formatter:
 
 class FullyBufferedFormatter(Formatter):
     def __call__(self, command_name, response, stream=None):
+        before_paginate = 0
+        after_paginate = 0
         if stream is None:
             # Retrieve stdout on invocation instead of at import time
             # so that if anything wraps stdout we'll pick up those changes
@@ -73,7 +76,9 @@ class FullyBufferedFormatter(Formatter):
         # I think the interfaces between non-paginated
         # and paginated responses can still be cleaned up.
         if is_response_paginated(response):
+            before_paginate = time.perf_counter_ns()
             response_data = response.build_full_result()
+            after_paginate = time.perf_counter_ns()
         else:
             response_data = response
         response_data = self._get_transformed_response_for_output(
@@ -89,6 +94,7 @@ class FullyBufferedFormatter(Formatter):
             # flush is needed to avoid the "close failed in file object
             # destructor" in python2.x (see http://bugs.python.org/issue11380).
             self._flush_stream(stream)
+            return after_paginate - before_paginate
 
 
 class JSONFormatter(FullyBufferedFormatter):

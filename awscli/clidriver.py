@@ -103,6 +103,10 @@ METADATA_FILENAME = 'metadata.json'
 # See: https://bugs.python.org/issue29288
 ''.encode('idna')
 
+latency_start_time = None
+latency_end_time = None
+paginate_latency = None
+
 
 def main():
     with start_as_current_context():
@@ -271,11 +275,11 @@ class CLIDriver:
 
     def _er_log_start_time(self, builtins, model, params, context, **kwargs):
         if self._er_start_time is None:
-            self._er_start_time = time.time_ns()
+            self._er_start_time = time.perf_counter_ns()
 
     def _er_log_end_time(self, **kwargs):
         if self._er_end_time is None:
-            self._er_end_time = time.time_ns()
+            self._er_end_time = time.perf_counter_ns()
 
     def _update_config_chain(self):
         config_store = self.session.get_component('config_store')
@@ -550,6 +554,8 @@ class CLIDriver:
             args list of ``['s3', 'list-objects', '--bucket', 'foo']``.
 
         """
+        global latency_start_time
+        global latency_end_time
         if args is None:
             args = sys.argv[1:]
         command_table = self._get_command_table()
@@ -583,9 +589,20 @@ class CLIDriver:
                 parsed_globals=parsed_args,
             )
         finally:
+            metrics_output = ""
+            if latency_end_time is not None and latency_start_time is not None:
+                latency = latency_end_time - latency_start_time
+                if paginate_latency is not None:
+                    # operation is paginated, so latency is only the time to retrieve
+                    # a PageIterator. we must now add the time it took to use the iterator
+                    # to send the requests.
+                    latency += paginate_latency
+                metrics_output += str(latency)
             if self._er_end_time is not None and self._er_start_time is not None:
+                metrics_output += f"\n{self._er_end_time - self._er_start_time}"
+            if metrics_output:
                 filename = str(time.time_ns())
-                Path(filename).write_text(str(self._er_end_time - self._er_start_time))
+                Path(filename).write_text(metrics_output)
 
     def _emit_session_event(self, parsed_args):
         # This event is guaranteed to run after the session has been
@@ -1073,19 +1090,36 @@ class CLIOperationCaller:
     def _make_client_call(
         self, client, operation_name, parameters, parsed_globals
     ):
+        global latency_start_time
+        global latency_end_time
         py_operation_name = xform_name(operation_name)
         if client.can_paginate(py_operation_name) and parsed_globals.paginate:
             paginator = client.get_paginator(py_operation_name)
+            if latency_start_time is None:
+                latency_start_time = time.perf_counter_ns()
             response = paginator.paginate(**parameters)
+            if latency_end_time is None:
+                latency_end_time = time.perf_counter_ns()
         else:
-            response = getattr(client, py_operation_name)(**parameters)
+            if latency_start_time is None:
+                latency_start_time = time.perf_counter_ns()
+            try:
+                response = getattr(client, py_operation_name)(**parameters)
+                if latency_end_time is None:
+                    latency_end_time = time.perf_counter_ns()
+            except Exception:
+                if latency_end_time is None:
+                    latency_end_time = time.perf_counter_ns()
+                raise
+
         return response
 
     def _display_response(self, command_name, response, parsed_globals):
+        global paginate_latency
         output = parsed_globals.output
         if output is None:
             output = self._session.get_config_variable('output')
 
         formatter = get_formatter(output, parsed_globals)
         with self._output_stream_factory.get_output_stream() as stream:
-            formatter(command_name, response, stream)
+            paginate_latency = formatter(command_name, response, stream)
