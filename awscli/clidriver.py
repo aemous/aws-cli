@@ -110,20 +110,22 @@ def main():
 def create_clidriver(args=None):
     import awscli.perf_timer as T
     debug = None
+    parsed_args = None
     if args is not None:
         parser = FirstPassGlobalArgParser()
-        args, _ = parser.parse_known_args(args)
-        debug = args.debug
+        parsed_args, _ = parser.parse_known_args(args)
+        debug = parsed_args.debug
     session = botocore.session.Session()
     _set_user_agent_for_session(session)
     with T.timer('create_clidriver.load_plugins'):
         load_plugins(
             session.full_config.get('plugins', {}),
             event_hooks=session.get_component('event_emitter'),
+            args=args,
         )
     error_handlers_chain = construct_cli_error_handlers_chain(session)
     driver = CLIDriver(
-        session=session, error_handler=error_handlers_chain, debug=debug
+        session=session, error_handler=error_handlers_chain, debug=parsed_args.debug
     )
     return driver
 
