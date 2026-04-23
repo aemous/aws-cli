@@ -70,6 +70,7 @@ class LazyInitEmitter(HierarchicalEmitter):
             self._init_cache[event_name] = candidates
         for entry in candidates:
             if entry not in self._initialized:
+                import awscli.perf_timer as T
                 self._initialized.add(entry)
                 self._pending_count -= 1
                 module_path, fn_name, entry_type = entry
@@ -77,23 +78,25 @@ class LazyInitEmitter(HierarchicalEmitter):
                     'Lazy-initializing plugin %s.%s (%s) for event %s',
                     module_path, fn_name, entry_type, event_name,
                 )
-                mod = importlib.import_module(module_path)
-                fn = getattr(mod, fn_name)
-                if entry_type == 'direct':
-                    # Direct handler: register fn as a handler for the
-                    # event pattern it was originally associated with.
-                    # For classes (e.g. ParamShorthandParser), instantiate.
-                    handler = fn() if isinstance(fn, type) else fn
-                    # Find the event pattern this entry was stored under.
-                    # We need to register against the original pattern,
-                    # not the emitted event_name.
-                    self._register_direct_handler(entry, handler)
-                else:
-                    # Initializer function: call fn(event_handlers)
-                    if isinstance(fn, type):
-                        fn(self)
+                with T.timer(f"init_import:{module_path}:{fn_name}"):
+                    mod = importlib.import_module(module_path)
+                    fn = getattr(mod, fn_name)
+                with T.timer(f"init_register:{module_path}:{fn_name}"):
+                    if entry_type == 'direct':
+                        # Direct handler: register fn as a handler for the
+                        # event pattern it was originally associated with.
+                        # For classes (e.g. ParamShorthandParser), instantiate.
+                        handler = fn() if isinstance(fn, type) else fn
+                        # Find the event pattern this entry was stored under.
+                        # We need to register against the original pattern,
+                        # not the emitted event_name.
+                        self._register_direct_handler(entry, handler)
                     else:
-                        fn(self)
+                        # Initializer function: call fn(event_handlers)
+                        if isinstance(fn, type):
+                            fn(self)
+                        else:
+                            fn(self)
 
     def _register_direct_handler(self, entry, handler):
         """Register a direct handler against its original event pattern."""
