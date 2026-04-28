@@ -15,5 +15,25 @@ PLUGINS_REGISTRY = {
         ('awscli.customizations.history', 'register_history_mode'),
         ('awscli.customizations.sso', 'register_sso_commands'),
         ('awscli.customizations.globalargs', 'register_parse_global_args')
+    ],
+    'codedeploy': [
+        ('awscli.customizations.codedeploy.codedeploy', 'initialize')
+    ],
+    'deploy': [
+        ('awscli.customizations.codedeploy.codedeploy', 'initialize'),
+        ('awscli.customizations.s3errormsg', 'register_s3_error_msg')
+    ],
+    'help': [
+        ('awscli.customizations.s3.s3', 's3_plugin_initialize'),
+    ],
+    's3': [
+        ('awscli.customizations.s3.s3', 's3_plugin_initialize'),
+        ('awscli.customizations.s3errormsg', 'register_s3_error_msg'),
+    ],
+    's3api': [
+        ('awscli.customizations.s3.s3', 's3_plugin_initialize'),
+        ('awscli.customizations.s3errormsg', 'register_s3_error_msg'),
+        ('awscli.customizations.s3events', 'register_event_stream_arg'),
+        ('awscli.customizations.s3events', 'register_document_expires_string'),
     ]
 }

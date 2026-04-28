@@ -112,13 +112,14 @@ def create_clidriver(args=None):
     debug = None
     if args is not None:
         parser = FirstPassGlobalArgParser()
-        args, _ = parser.parse_known_args(args)
+        args, remaining = parser.parse_known_args(args)
         debug = args.debug
     session = botocore.session.Session()
     _set_user_agent_for_session(session)
     with T.timer('create_clidriver.load_plugins'):
         load_plugins(
             session.full_config.get('plugins', {}),
+            remaining,
             event_hooks=session.get_component('event_emitter'),
         )
     error_handlers_chain = construct_cli_error_handlers_chain(session)
