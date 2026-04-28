@@ -18,6 +18,10 @@ from botocore.exceptions import ProfileNotFound
 from awscli.shorthand import ModelVisitor
 
 
+def register_binary_formatter(events, **kwargs):
+    events.register('session-initialized', add_binary_formatter)
+
+
 def add_binary_formatter(session, parsed_args, **kwargs):
     binary_format = parsed_args.cli_binary_format
     if binary_format is None:

@@ -182,6 +182,10 @@ def _set_user_agent_for_session(session):
     add_session_id_component_to_user_agent_extra(session)
 
 
+def register_no_pager_handler(events):
+    events.register('session-initialized', no_pager_handler)
+
+
 def no_pager_handler(session, parsed_args, **kwargs):
     if parsed_args.no_cli_pager:
         config_store = session.get_component('config_store')
@@ -511,19 +515,6 @@ class CLIDriver:
 
         return version_string
 
-    def create_parser(self, command_table):
-        # Also add a 'help' command.
-        command_table['help'] = self.create_help_command()
-        cli_data = self._get_cli_data()
-        parser = MainArgParser(
-            command_table,
-            self._cli_version(),
-            cli_data.get('description', None),
-            self._get_argument_table(),
-            prog="aws",
-        )
-        return parser
-
     def main(self, args=None):
         """
 
@@ -535,21 +526,30 @@ class CLIDriver:
         import awscli.perf_timer as T
         if args is None:
             args = sys.argv[1:]
-        with T.timer('CLIDriver.build_command_table'):
-            command_table = self._get_command_table()
-        parser = self.create_parser(command_table)
-        self._add_aliases(command_table, parser)
         parsed_args = None
         try:
+            cli_data = self._get_cli_data()
+            parser = MainArgParser(
+                self._cli_version(),
+                cli_data.get('description', None),
+                prog="aws",
+            )
             # Because _handle_top_level_args emits events, it's possible
             # that exceptions can be raised, which should have the same
             # general exception handling logic as calling into the
             # command table.  This is why it's in the try/except clause.
             with T.timer('CLIDriver.parse_args'):
                 parsed_args, remaining = parser.parse_known_args(args)
-                self._handle_top_level_args(parsed_args)
-                validate_preferred_output_encoding()
-                self._emit_session_event(parsed_args)
+            with T.timer('CLIDriver.build_command_table'):
+                command_table = self._get_command_table()
+                command_table['help'] = self.create_help_command()
+            with T.timer('CLIDriver.build_argument_table'):
+                argument_table = self._get_argument_table()
+            parser.build(command_table, argument_table)
+            self._add_aliases(command_table, parser)
+            self._handle_top_level_args(parsed_args)
+            validate_preferred_output_encoding()
+            self._emit_session_event(parsed_args)
             HISTORY_RECORDER.record('CLI_VERSION', self._cli_version(), 'CLI')
             HISTORY_RECORDER.record('CLI_ARGUMENTS', args, 'CLI')
             return command_table[parsed_args.command](remaining, parsed_args)

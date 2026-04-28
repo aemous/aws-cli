@@ -121,10 +121,8 @@ class MainArgParser(CLIArgParser):
 
     def __init__(
         self,
-        command_table,
         version_string,
         description,
-        argument_table,
         prog=None,
     ):
         super().__init__(
@@ -135,7 +133,12 @@ class MainArgParser(CLIArgParser):
             usage=USAGE,
             prog=prog,
         )
-        self._build(command_table, version_string, argument_table)
+        self.add_argument(
+            '--version',
+            action="version",
+            version=version_string,
+            help='Display the version of this tool',
+        )
 
     def _create_choice_help(self, choices):
         help_str = ''
@@ -143,16 +146,10 @@ class MainArgParser(CLIArgParser):
             help_str += f'* {choice}\n'
         return help_str
 
-    def _build(self, command_table, version_string, argument_table):
+    def build(self, command_table, argument_table):
         for argument_name in argument_table:
             argument = argument_table[argument_name]
             argument.add_to_parser(self)
-        self.add_argument(
-            '--version',
-            action="version",
-            version=version_string,
-            help='Display the version of this tool',
-        )
         self.add_argument(
             'command', action=CommandAction, command_table=command_table
         )

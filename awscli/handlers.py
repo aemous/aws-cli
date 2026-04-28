@@ -138,7 +138,10 @@ from awscli.handlers_registry import PLUGINS_REGISTRY
 
 
 def awscli_initialize(event_handlers):
-    pass
+    for module_name, function_name in PLUGINS_REGISTRY['__main__']:
+        module = __import__(module_name, fromlist=[function_name])
+        func = getattr(module, function_name)
+        func(event_handlers)
     # event_handlers.register('session-initialized', register_uri_param_handler)
     # event_handlers.register('session-initialized', add_binary_formatter)
     # event_handlers.register('session-initialized', no_pager_handler)
@@ -158,9 +161,6 @@ def awscli_initialize(event_handlers):
     # #                            param_shorthand.add_example_fn)
     # event_handlers.register('doc-examples.*.*', add_examples)
     # register_cli_input_args(event_handlers)
-    # event_handlers.register(
-    #     'building-argument-table.*', add_streaming_output_arg
-    # )
     # register_count_events(event_handlers)
     # event_handlers.register(
     #     'building-argument-table.ec2.get-password-data',
