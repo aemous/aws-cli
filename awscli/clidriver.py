@@ -113,6 +113,7 @@ def main():
 
 def create_clidriver(args=None):
     import awscli.perf_timer as T
+    remaining = None
     debug = None
     if args is not None:
         parser = FirstPassGlobalArgParser()
