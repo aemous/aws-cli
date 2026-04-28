@@ -142,7 +142,7 @@ def awscli_initialize(event_handlers, remaining):
         module = __import__(module_name, fromlist=[function_name])
         func = getattr(module, function_name)
         func(event_handlers)
-    if remaining[0] in PLUGINS_REGISTRY:
+    if remaining is not None and remaining[0] in PLUGINS_REGISTRY:
         for module_name, function_name in PLUGINS_REGISTRY[remaining[0]]:
             module = __import__(module_name, fromlist=[function_name])
             func = getattr(module, function_name)
