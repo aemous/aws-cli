@@ -2,6 +2,8 @@ import os
 
 from PyInstaller.utils import hooks
 
+from awscli.handlers_registry import PLUGINS_REGISTRY
+
 hiddenimports = [
     'docutils',
     'urllib',
@@ -17,6 +19,13 @@ hiddenimports = [
     # https://github.com/pypa/setuptools/issues/1963
     'pkg_resources.py2_warn',
 ]
+
+# handlers_registry.py references modules as strings that are imported
+# dynamically at runtime. PyInstaller cannot discover these through
+# static analysis, so we add them as hidden imports.
+hiddenimports += list(
+    {mod for entries in PLUGINS_REGISTRY.values() for mod, _ in entries}
+)
 
 imports_for_legacy_plugins = hooks.collect_submodules(
     'http'
