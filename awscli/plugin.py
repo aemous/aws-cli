@@ -22,7 +22,12 @@ BUILTIN_PLUGINS = {'__builtin__': 'awscli.handlers'}
 CLI_LEGACY_PLUGIN_PATH = 'cli_legacy_plugin_path'
 
 
-def load_plugins(plugin_mapping, event_hooks=None, include_builtins=True):
+def load_plugins(
+    plugin_mapping,
+    remaining,
+    event_hooks=None,
+    include_builtins=True
+):
     """
 
     :type plugin_mapping: dict
@@ -45,7 +50,7 @@ def load_plugins(plugin_mapping, event_hooks=None, include_builtins=True):
     if event_hooks is None:
         event_hooks = HierarchicalEmitter()
     if include_builtins:
-        _load_plugins(BUILTIN_PLUGINS, event_hooks)
+        _load_plugins(BUILTIN_PLUGINS, event_hooks, remaining)
     plugin_path = plugin_mapping.pop(CLI_LEGACY_PLUGIN_PATH, None)
     if plugin_path is not None:
         _add_plugin_path_to_sys_path(plugin_path)
@@ -58,11 +63,11 @@ def load_plugins(plugin_mapping, event_hooks=None, include_builtins=True):
     return event_hooks
 
 
-def _load_plugins(plugin_mapping, event_hooks):
+def _load_plugins(plugin_mapping, event_hooks, remaining):
     modules = _import_plugins(plugin_mapping)
     for name, plugin in zip(plugin_mapping.keys(), modules):
         log.debug("Initializing plugin %s: %s", name, plugin)
-        plugin.awscli_initialize(event_hooks)
+        plugin.awscli_initialize(event_hooks, remaining)
 
 
 def _import_plugins(plugin_mapping):

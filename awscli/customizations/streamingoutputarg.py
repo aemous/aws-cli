@@ -15,6 +15,12 @@ from botocore.model import Shape
 from awscli.arguments import BaseCLIArgument
 
 
+def register_streaming_output_arg(cli):
+    cli.register(
+        'building-argument-table.*', add_streaming_output_arg
+    )
+
+
 def add_streaming_output_arg(
     argument_table, operation_model, session, **kwargs
 ):

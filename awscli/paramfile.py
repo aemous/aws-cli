@@ -24,6 +24,10 @@ class ResourceLoadingError(Exception):
     pass
 
 
+def register_param_handler_session(events):
+    events.register('session-initialized', register_uri_param_handler)
+
+
 def register_uri_param_handler(session, **kwargs):
     prefix_map = copy.deepcopy(LOCAL_PREFIX_MAP)
     handler = URIArgumentHandler(prefix_map)
