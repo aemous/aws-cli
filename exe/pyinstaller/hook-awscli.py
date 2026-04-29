@@ -8,9 +8,8 @@ def _collect_lazy_imports_from_handlers():
     """Parse handlers.py with AST to extract module paths from
     LazyCommand (3rd arg) and lazy_callback (1st arg) calls.
     """
-    handlers_path = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), 'awscli', 'handlers.py'
-    )
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    handlers_path = os.path.join(repo_root, 'awscli', 'handlers.py')
     with open(handlers_path) as f:
         tree = ast.parse(f.read())
     modules = set()
