@@ -474,11 +474,3 @@ def awscli_initialize(event_handlers):
             '_add_generate_dsql_db_connect_admin_auth_token',
         ),
     )
-
-    # cloudwatch otel rename (~0.5ms)
-    event_handlers.register(
-        'building-command-table.cloudwatch',
-        lazy_callback(
-            'awscli.customizations.cloudwatch', 'rename_otel_commands'
-        ),
-    )
