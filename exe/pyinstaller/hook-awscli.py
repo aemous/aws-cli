@@ -1,6 +1,37 @@
+import ast
 import os
 
 from PyInstaller.utils import hooks
+
+
+def _collect_lazy_imports_from_handlers():
+    """Parse handlers.py with AST to extract module paths from
+    LazyCommand (3rd arg) and lazy_callback (1st arg) calls.
+    """
+    handlers_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), 'awscli', 'handlers.py'
+    )
+    with open(handlers_path) as f:
+        tree = ast.parse(f.read())
+    modules = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = None
+        if isinstance(func, ast.Name):
+            name = func.id
+        elif isinstance(func, ast.Attribute):
+            name = func.attr
+        if name == 'LazyCommand' and len(node.args) >= 3:
+            arg = node.args[2]
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                modules.add(arg.value)
+        elif name == 'lazy_callback' and len(node.args) >= 1:
+            arg = node.args[0]
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                modules.add(arg.value)
+    return sorted(modules)
 
 hiddenimports = [
     'docutils',
@@ -27,6 +58,10 @@ alias_packages_plugins = hooks.collect_submodules(
     'awscli.botocore'
 ) + hooks.collect_submodules('awscli.s3transfer')
 hiddenimports += alias_packages_plugins
+
+# Lazy-loaded modules in handlers.py are not discovered by PyInstaller's
+# static analysis. Parse the source to collect them automatically.
+hiddenimports += _collect_lazy_imports_from_handlers()
 
 
 # Completion model files are only used at build time to generate the
