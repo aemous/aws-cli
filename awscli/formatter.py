@@ -16,7 +16,7 @@ from datetime import datetime
 from botocore.compat import json
 from botocore.paginate import PageIterator
 from botocore.utils import set_value_from_jmespath
-from ruamel.yaml import YAML
+# from ruamel.yaml import YAML
 
 from awscli import compat, text
 from awscli.table import ColorizedStyler, MultiTable, Styler
@@ -108,90 +108,90 @@ class JSONFormatter(FullyBufferedFormatter):
             stream.write('\n')
 
 
-class YAMLDumper:
-    def __init__(self):
-        self._yaml = YAML(typ='safe')
-        # Encoding is set to None because we handle the encoding by
-        # wrapping the stream, so there's no need for the yaml library
-        # to do it.
-        self._yaml.encoding = None
-        self._yaml.representer.default_flow_style = False
-
-    def dump(self, value, stream):
-        if self._is_json_scalar(value) or isinstance(value, datetime):
-            # YAML will attempt to disambiguate scalars by ending the stream
-            # with an elipsis. While this is technically valid YAML,
-            # it's not particularly useful. Unfortunately there's no
-            # universal way around this, so instead we just json dump the
-            # values. Also note that datetimes are explicitly not supported
-            # - the json dumper will complain if you pass them in. datetime
-            # values should respect the cli timestamp format, which is
-            # impossible to do from the Formatter.
-            json.dump(value, stream, ensure_ascii=False, default=json_encoder)
-            stream.write('\n')
-        else:
-            self._yaml.dump(value, stream)
-
-    def _is_json_scalar(self, value):
-        if value is None:
-            return True
-        return isinstance(value, (int, float, bool, str))
-
-
-class YAMLFormatter(FullyBufferedFormatter):
-    def __init__(self, args, yaml_dumper=None):
-        super(YAMLFormatter, self).__init__(args)
-        self._yaml_dumper = yaml_dumper
-        if yaml_dumper is None:
-            self._yaml_dumper = YAMLDumper()
-
-    def _format_response(self, command_name, response, stream):
-        if response == {}:
-            return None
-        self._yaml_dumper.dump(response, stream)
+# class YAMLDumper:
+#     def __init__(self):
+#         self._yaml = YAML(typ='safe')
+#         # Encoding is set to None because we handle the encoding by
+#         # wrapping the stream, so there's no need for the yaml library
+#         # to do it.
+#         self._yaml.encoding = None
+#         self._yaml.representer.default_flow_style = False
+#
+#     def dump(self, value, stream):
+#         if self._is_json_scalar(value) or isinstance(value, datetime):
+#             # YAML will attempt to disambiguate scalars by ending the stream
+#             # with an elipsis. While this is technically valid YAML,
+#             # it's not particularly useful. Unfortunately there's no
+#             # universal way around this, so instead we just json dump the
+#             # values. Also note that datetimes are explicitly not supported
+#             # - the json dumper will complain if you pass them in. datetime
+#             # values should respect the cli timestamp format, which is
+#             # impossible to do from the Formatter.
+#             json.dump(value, stream, ensure_ascii=False, default=json_encoder)
+#             stream.write('\n')
+#         else:
+#             self._yaml.dump(value, stream)
+#
+#     def _is_json_scalar(self, value):
+#         if value is None:
+#             return True
+#         return isinstance(value, (int, float, bool, str))
 
 
-class StreamedYAMLFormatter(Formatter):
-    def __init__(self, args, yaml_dumper=None):
-        super(StreamedYAMLFormatter, self).__init__(args)
-        self._yaml_dumper = yaml_dumper
-        if yaml_dumper is None:
-            self._yaml_dumper = YAMLDumper()
+# class YAMLFormatter(FullyBufferedFormatter):
+#     def __init__(self, args, yaml_dumper=None):
+#         super(YAMLFormatter, self).__init__(args)
+#         self._yaml_dumper = yaml_dumper
+#         if yaml_dumper is None:
+#             self._yaml_dumper = YAMLDumper()
+#
+#     def _format_response(self, command_name, response, stream):
+#         if response == {}:
+#             return None
+#         self._yaml_dumper.dump(response, stream)
 
-    def __call__(self, command_name, response, stream=None):
-        if stream is None:
-            stream = self._get_default_stream()
-        compat.set_preferred_output_encoding(stream)
-        response_stream = self._get_response_stream(response)
-        for response in response_stream:
-            try:
-                # For YAML it is ambiguous as to whether the output from the
-                # stream is N responses in 1 list or N lists each with 1
-                # response. We go with the latter so we can reuse our YAML
-                # dumper
-                self._yaml_dumper.dump([response], stream)
-            except OSError:
-                # If the reading end of our stdout stream has closed the file
-                # we can just exit.
-                return
-            finally:
-                # flush is needed to avoid the "close failed in file object
-                # destructor" in python2.x. See:
-                # http://bugs.python.org/issue11380).
-                self._flush_stream(stream)
 
-    def _get_response_stream(self, response):
-        if is_response_paginated(response):
-            return compat.imap(
-                self._get_transformed_response_for_output, response
-            )
-        else:
-            output = self._get_transformed_response_for_output(response)
-            if output == {}:
-                # The operation did not have an output so return an empty list
-                # as the stream so nothing gets printed out.
-                return []
-            return [output]
+# class StreamedYAMLFormatter(Formatter):
+#     def __init__(self, args, yaml_dumper=None):
+#         super(StreamedYAMLFormatter, self).__init__(args)
+#         self._yaml_dumper = yaml_dumper
+#         if yaml_dumper is None:
+#             self._yaml_dumper = YAMLDumper()
+#
+#     def __call__(self, command_name, response, stream=None):
+#         if stream is None:
+#             stream = self._get_default_stream()
+#         compat.set_preferred_output_encoding(stream)
+#         response_stream = self._get_response_stream(response)
+#         for response in response_stream:
+#             try:
+#                 # For YAML it is ambiguous as to whether the output from the
+#                 # stream is N responses in 1 list or N lists each with 1
+#                 # response. We go with the latter so we can reuse our YAML
+#                 # dumper
+#                 self._yaml_dumper.dump([response], stream)
+#             except OSError:
+#                 # If the reading end of our stdout stream has closed the file
+#                 # we can just exit.
+#                 return
+#             finally:
+#                 # flush is needed to avoid the "close failed in file object
+#                 # destructor" in python2.x. See:
+#                 # http://bugs.python.org/issue11380).
+#                 self._flush_stream(stream)
+#
+#     def _get_response_stream(self, response):
+#         if is_response_paginated(response):
+#             return compat.imap(
+#                 self._get_transformed_response_for_output, response
+#             )
+#         else:
+#             output = self._get_transformed_response_for_output(response)
+#             if output == {}:
+#                 # The operation did not have an output so return an empty list
+#                 # as the stream so nothing gets printed out.
+#                 return []
+#             return [output]
 
 
 class TableFormatter(FullyBufferedFormatter):
@@ -383,8 +383,8 @@ CLI_OUTPUT_FORMATS = {
     'json': JSONFormatter,
     'text': TextFormatter,
     'table': TableFormatter,
-    'yaml': YAMLFormatter,
-    'yaml-stream': StreamedYAMLFormatter,
+    # 'yaml': YAMLFormatter,
+    # 'yaml-stream': StreamedYAMLFormatter,
     'off': OffFormatter,
 }
 

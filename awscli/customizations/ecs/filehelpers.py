@@ -12,7 +12,7 @@
 # language governing permissions and limitations under the License.
 import json
 
-from ruamel.yaml import YAML
+# from ruamel.yaml import YAML
 
 from awscli.customizations.ecs import exceptions
 
@@ -79,5 +79,6 @@ def parse_appspec(appspec_str):
     try:
         return json.loads(appspec_str)
     except ValueError:
-        yaml = YAML(typ='safe', pure=True)
-        return yaml.load(appspec_str)
+        raise
+        # yaml = YAML(typ='safe', pure=True)
+        # return yaml.load(appspec_str)

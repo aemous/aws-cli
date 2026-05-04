@@ -42,7 +42,7 @@ import botocore.loaders
 from botocore.awsrequest import AWSResponse
 from botocore.exceptions import ClientError, WaiterError
 from botocore.session import Session
-from ruamel.yaml import YAML
+# from ruamel.yaml import YAML
 
 import awscli.clidriver
 from awscli.clidriver import CLIDriver
@@ -441,8 +441,8 @@ class BaseAWSCommandParamsTest(unittest.TestCase):
         self.http_responses = None
         self.driver = create_clidriver()
         self.entry_point = awscli.clidriver.AWSCLIEntryPoint(self.driver)
-        self.yaml = YAML(typ="safe", pure=True)
-        self.yaml.representer.default_flow_style = False
+        # self.yaml = YAML(typ="safe", pure=True)
+        # self.yaml.representer.default_flow_style = False
 
     def tearDown(self):
         # This clears all the previous registrations.

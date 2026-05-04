@@ -26,7 +26,7 @@ from awscli.customizations.eks.kubeconfig import (
     KubeconfigValidator,
     KubeconfigWriter,
 )
-from awscli.customizations.eks.ordered_yaml import ordered_yaml_dump
+# from awscli.customizations.eks.ordered_yaml import ordered_yaml_dump
 from awscli.customizations.utils import uni_print
 
 LOG = logging.getLogger(__name__)
@@ -139,17 +139,17 @@ class UpdateKubeconfigCommand(BasicCommand):
         },
     ]
 
-    def _display_entries(self, entries):
-        """
-        Display entries in yaml format
-
-        :param entries: a list of OrderedDicts to be printed
-        :type entries: list
-        """
-        uni_print("Entries:\n\n")
-        for entry in entries:
-            uni_print(ordered_yaml_dump(entry))
-            uni_print("\n")
+    # def _display_entries(self, entries):
+    #     """
+    #     Display entries in yaml format
+    #
+    #     :param entries: a list of OrderedDicts to be printed
+    #     :type entries: list
+    #     """
+    #     uni_print("Entries:\n\n")
+    #     for entry in entries:
+    #         uni_print(ordered_yaml_dump(entry))
+    #         uni_print("\n")
 
     def _run_main(self, parsed_args, parsed_globals):
         client = EKSClient(
@@ -173,7 +173,8 @@ class UpdateKubeconfigCommand(BasicCommand):
         )
 
         if parsed_args.dry_run:
-            uni_print(config.dump_content())
+            # uni_print(config.dump_content())
+            pass
         else:
             writer = KubeconfigWriter()
             writer.write_kubeconfig(config)
@@ -187,10 +188,10 @@ class UpdateKubeconfigCommand(BasicCommand):
                     f"Added new context {new_context_dict['name']} to {config.path}\n"
                 )
 
-            if parsed_args.verbose:
-                self._display_entries(
-                    [new_context_dict, new_user_dict, new_cluster_dict]
-                )
+            # if parsed_args.verbose:
+            #     self._display_entries(
+            #         [new_context_dict, new_user_dict, new_cluster_dict]
+            #     )
         return 0
 
 

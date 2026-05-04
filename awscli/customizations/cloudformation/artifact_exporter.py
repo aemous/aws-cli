@@ -25,10 +25,10 @@ from botocore.utils import set_value_from_jmespath
 
 from awscli.compat import compat_open, urlparse
 from awscli.customizations.cloudformation import exceptions
-from awscli.customizations.cloudformation.yamlhelper import (
-    yaml_dump,
-    yaml_parse,
-)
+# from awscli.customizations.cloudformation.yamlhelper import (
+#     yaml_dump,
+#     yaml_parse,
+# )
 
 LOG = logging.getLogger(__name__)
 
@@ -498,10 +498,10 @@ class CloudFormationStackResource(Resource):
             template_path, parent_dir, self.uploader
         ).export()
 
-        exported_template_str = yaml_dump(exported_template_dict)
+        # exported_template_str = yaml_dump(exported_template_dict)
 
         with mktempfile() as temporary_file:
-            temporary_file.write(exported_template_str)
+            # temporary_file.write(exported_template_str)
             temporary_file.flush()
 
             url = self.uploader.upload_with_dedup(
@@ -643,7 +643,7 @@ class Template:
         with compat_open(abs_template_path, "r") as handle:
             template_str = handle.read()
 
-        self.template_dict = yaml_parse(template_str)
+        # self.template_dict = yaml_parse(template_str)
         self.template_dir = template_dir
         self.resources_to_export = resources_to_export
         self.metadata_to_export = metadata_to_export
@@ -692,24 +692,24 @@ class Template:
 
         return template_dict
 
-    def export(self):
-        """
-        Exports the local artifacts referenced by the given template to an
-        s3 bucket.
-
-        :return: The template with references to artifacts that have been
-        exported to s3.
-        """
-        self.template_dict = self.export_metadata(self.template_dict)
-
-        if "Resources" not in self.template_dict:
-            return self.template_dict
-
-        self.template_dict = self.export_global_artifacts(self.template_dict)
-
-        self.export_resources(self.template_dict["Resources"])
-
-        return self.template_dict
+    # def export(self):
+    #     """
+    #     Exports the local artifacts referenced by the given template to an
+    #     s3 bucket.
+    #
+    #     :return: The template with references to artifacts that have been
+    #     exported to s3.
+    #     """
+    #     # self.template_dict = self.export_metadata(self.template_dict)
+    #
+    #     # if "Resources" not in self.template_dict:
+    #     #     return self.template_dict
+    #     #
+    #     # self.template_dict = self.export_global_artifacts(self.template_dict)
+    #
+    #     self.export_resources(self.template_dict["Resources"])
+    #
+    #     return self.template_dict
 
     def export_resources(self, resource_dict):
         for resource_id, resource in resource_dict.items():

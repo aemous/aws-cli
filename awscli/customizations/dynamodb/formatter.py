@@ -13,35 +13,35 @@
 import decimal
 from base64 import b64encode
 
-from ruamel.yaml import ScalarNode
+# from ruamel.yaml import ScalarNode
 
 from awscli.customizations.dynamodb.types import Binary
-from awscli.formatter import YAMLDumper
+# from awscli.formatter import YAMLDumper
 
 
-class DynamoYAMLDumper(YAMLDumper):
-    def __init__(self):
-        super(DynamoYAMLDumper, self).__init__()
-        self._yaml.representer.add_representer(
-            decimal.Decimal, self._represent_decimal
-        )
-        self._yaml.representer.add_representer(Binary, self._represent_binary)
-
-    def _represent_decimal(self, underlying_dumper, data):
-        if data == data.to_integral():
-            return ScalarNode('tag:yaml.org,2002:int', str(data))
-        else:
-            return ScalarNode('tag:yaml.org,2002:float', str(data))
-
-    def _represent_binary(self, underlying_dumper, data):
-        encoded_data = b64encode(data.value).decode('ascii')
-        return underlying_dumper.represent_scalar(
-            'tag:yaml.org,2002:binary', encoded_data, style='"'
-        )
-
-    def dump(self, response, stream):
-        if isinstance(response, decimal.Decimal):
-            stream.write(str(response))
-            stream.write('\n')
-            return
-        super(DynamoYAMLDumper, self).dump(response, stream)
+# class DynamoYAMLDumper(YAMLDumper):
+#     def __init__(self):
+#         super(DynamoYAMLDumper, self).__init__()
+#         self._yaml.representer.add_representer(
+#             decimal.Decimal, self._represent_decimal
+#         )
+#         self._yaml.representer.add_representer(Binary, self._represent_binary)
+#
+#     def _represent_decimal(self, underlying_dumper, data):
+#         if data == data.to_integral():
+#             return ScalarNode('tag:yaml.org,2002:int', str(data))
+#         else:
+#             return ScalarNode('tag:yaml.org,2002:float', str(data))
+#
+#     def _represent_binary(self, underlying_dumper, data):
+#         encoded_data = b64encode(data.value).decode('ascii')
+#         return underlying_dumper.represent_scalar(
+#             'tag:yaml.org,2002:binary', encoded_data, style='"'
+#         )
+#
+#     def dump(self, response, stream):
+#         if isinstance(response, decimal.Decimal):
+#             stream.write(str(response))
+#             stream.write('\n')
+#             return
+#         super(DynamoYAMLDumper, self).dump(response, stream)

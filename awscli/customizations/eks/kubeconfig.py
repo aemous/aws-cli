@@ -14,15 +14,15 @@
 import errno
 import os
 
-import ruamel.yaml as yaml
+# import ruamel.yaml as yaml
 from botocore.compat import OrderedDict
 
 from awscli.compat import compat_open
 from awscli.customizations.eks.exceptions import EKSError
-from awscli.customizations.eks.ordered_yaml import (
-    ordered_yaml_dump,
-    ordered_yaml_load,
-)
+# from awscli.customizations.eks.ordered_yaml import (
+#     ordered_yaml_dump,
+#     ordered_yaml_load,
+# )
 
 
 class KubeconfigError(EKSError):
@@ -58,9 +58,9 @@ class Kubeconfig:
             content = _get_new_kubeconfig_content()
         self.content = content
 
-    def dump_content(self):
-        """Return the stored content in yaml format."""
-        return ordered_yaml_dump(self.content)
+    # def dump_content(self):
+    #     """Return the stored content in yaml format."""
+    #     return ordered_yaml_dump(self.content)
 
     def has_cluster(self, name):
         """
@@ -147,42 +147,42 @@ class KubeconfigLoader:
             validator = KubeconfigValidator()
         self._validator = validator
 
-    def load_kubeconfig(self, path):
-        """
-        Loads the kubeconfig found at the given path.
-        If no file is found at the given path,
-        Generate a new kubeconfig to write back.
-        If the kubeconfig is valid, loads the content from it.
-        If the kubeconfig is invalid, throw the relevant exception.
-
-        :param path: The path to load a kubeconfig from
-        :type path: string
-
-        :raises KubeconfigInaccessableError: if the kubeconfig can't be opened
-        :raises KubeconfigCorruptedError: if the kubeconfig is invalid
-
-        :return: The loaded kubeconfig
-        :rtype: Kubeconfig
-        """
-        try:
-            with compat_open(path, "r") as stream:
-                loaded_content = ordered_yaml_load(stream)
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                loaded_content = None
-            else:
-                raise KubeconfigInaccessableError(
-                    f"Can't open kubeconfig for reading: {e}"
-                )
-        except yaml.YAMLError as e:
-            raise KubeconfigCorruptedError(
-                f"YamlError while loading kubeconfig: {e}"
-            )
-
-        loaded_config = Kubeconfig(path, loaded_content)
-        self._validator.validate_config(loaded_config)
-
-        return loaded_config
+    # def load_kubeconfig(self, path):
+    #     """
+    #     Loads the kubeconfig found at the given path.
+    #     If no file is found at the given path,
+    #     Generate a new kubeconfig to write back.
+    #     If the kubeconfig is valid, loads the content from it.
+    #     If the kubeconfig is invalid, throw the relevant exception.
+    #
+    #     :param path: The path to load a kubeconfig from
+    #     :type path: string
+    #
+    #     :raises KubeconfigInaccessableError: if the kubeconfig can't be opened
+    #     :raises KubeconfigCorruptedError: if the kubeconfig is invalid
+    #
+    #     :return: The loaded kubeconfig
+    #     :rtype: Kubeconfig
+    #     """
+    #     # try:
+    #     #     # with compat_open(path, "r") as stream:
+    #     #     #     loaded_content = ordered_yaml_load(stream)
+    #     # except OSError as e:
+    #     #     if e.errno == errno.ENOENT:
+    #     #         loaded_content = None
+    #     #     else:
+    #     #         raise KubeconfigInaccessableError(
+    #     #             f"Can't open kubeconfig for reading: {e}"
+    #     #         )
+    #     # except yaml.YAMLError as e:
+    #     #     raise KubeconfigCorruptedError(
+    #     #         f"YamlError while loading kubeconfig: {e}"
+    #     #     )
+    #
+    #     # loaded_config = Kubeconfig(path, loaded_content)
+    #     # self._validator.validate_config(loaded_config)
+    #
+    #     # return loaded_config
 
 
 class KubeconfigWriter:
@@ -206,15 +206,15 @@ class KubeconfigWriter:
                 raise KubeconfigInaccessableError(
                     f"Can't create directory for writing: {e}"
                 )
-        try:
-            with compat_open(
-                config.path, "w+", access_permissions=0o600
-            ) as stream:
-                ordered_yaml_dump(config.content, stream)
-        except OSError as e:
-            raise KubeconfigInaccessableError(
-                f"Can't open kubeconfig for writing: {e}"
-            )
+        # try:
+        #     with compat_open(
+        #         config.path, "w+", access_permissions=0o600
+        #     ) as stream:
+        #         ordered_yaml_dump(config.content, stream)
+        # except OSError as e:
+        #     raise KubeconfigInaccessableError(
+        #         f"Can't open kubeconfig for writing: {e}"
+        #     )
 
 
 class KubeconfigAppender:

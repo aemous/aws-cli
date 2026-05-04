@@ -12,48 +12,48 @@
 # language governing permissions and limitations under the License.
 import re
 
-import ruamel.yaml
+# import ruamel.yaml
 from botocore.compat import OrderedDict, json
-from ruamel.yaml.resolver import ScalarNode, SequenceNode
+# from ruamel.yaml.resolver import ScalarNode, SequenceNode
 
-from awscli.utils import SafeLineBreakEmitter, dump_yaml_to_str
+# from awscli.utils import SafeLineBreakEmitter, dump_yaml_to_str
 
 
-def intrinsics_multi_constructor(loader, tag_prefix, node):
-    """
-    YAML constructor to parse CloudFormation intrinsics.
-    This will return a dictionary with key being the intrinsic name
-    """
-
-    # Get the actual tag name excluding the first exclamation
-    tag = node.tag[1:]
-
-    # Some intrinsic functions doesn't support prefix "Fn::"
-    prefix = "Fn::"
-    if tag in ["Ref", "Condition"]:
-        prefix = ""
-
-    cfntag = prefix + tag
-
-    if tag == "GetAtt" and isinstance(node.value, str):
-        # ShortHand notation for !GetAtt accepts Resource.Attribute format
-        # while the standard notation is to use an array
-        # [Resource, Attribute]. Convert shorthand to standard format
-        value = node.value.split(".", 1)
-
-    elif isinstance(node, ScalarNode):
-        # Value of this node is scalar
-        value = loader.construct_scalar(node)
-
-    elif isinstance(node, SequenceNode):
-        # Value of this node is an array (Ex: [1,2])
-        value = loader.construct_sequence(node)
-
-    else:
-        # Value of this node is an mapping (ex: {foo: bar})
-        value = loader.construct_mapping(node)
-
-    return {cfntag: value}
+# def intrinsics_multi_constructor(loader, tag_prefix, node):
+#     """
+#     YAML constructor to parse CloudFormation intrinsics.
+#     This will return a dictionary with key being the intrinsic name
+#     """
+#
+#     # Get the actual tag name excluding the first exclamation
+#     tag = node.tag[1:]
+#
+#     # Some intrinsic functions doesn't support prefix "Fn::"
+#     prefix = "Fn::"
+#     if tag in ["Ref", "Condition"]:
+#         prefix = ""
+#
+#     cfntag = prefix + tag
+#
+#     if tag == "GetAtt" and isinstance(node.value, str):
+#         # ShortHand notation for !GetAtt accepts Resource.Attribute format
+#         # while the standard notation is to use an array
+#         # [Resource, Attribute]. Convert shorthand to standard format
+#         value = node.value.split(".", 1)
+#
+#     elif isinstance(node, ScalarNode):
+#         # Value of this node is scalar
+#         value = loader.construct_scalar(node)
+#
+#     elif isinstance(node, SequenceNode):
+#         # Value of this node is an array (Ex: [1,2])
+#         value = loader.construct_sequence(node)
+#
+#     else:
+#         # Value of this node is an mapping (ex: {foo: bar})
+#         value = loader.construct_mapping(node)
+#
+#     return {cfntag: value}
 
 
 def _dict_representer(dumper, data):
@@ -78,21 +78,21 @@ def _add_yaml_1_1_boolean_resolvers(resolver_cls):
     )
 
 
-def yaml_dump(dict_to_dump):
-    """
-    Dumps the dictionary as a YAML document
-    :param dict_to_dump:
-    :return:
-    """
-
-    yaml = ruamel.yaml.YAML(typ="safe", pure=True)
-    yaml.default_flow_style = False
-    yaml.Emitter = SafeLineBreakEmitter
-    yaml.Representer = FlattenAliasRepresenter
-    _add_yaml_1_1_boolean_resolvers(yaml.Resolver)
-    yaml.Representer.add_representer(OrderedDict, _dict_representer)
-
-    return dump_yaml_to_str(yaml, dict_to_dump)
+# def yaml_dump(dict_to_dump):
+#     """
+#     Dumps the dictionary as a YAML document
+#     :param dict_to_dump:
+#     :return:
+#     """
+#
+#     yaml = ruamel.yaml.YAML(typ="safe", pure=True)
+#     yaml.default_flow_style = False
+#     yaml.Emitter = SafeLineBreakEmitter
+#     yaml.Representer = FlattenAliasRepresenter
+#     _add_yaml_1_1_boolean_resolvers(yaml.Resolver)
+#     yaml.Representer.add_representer(OrderedDict, _dict_representer)
+#
+#     return dump_yaml_to_str(yaml, dict_to_dump)
 
 
 def _dict_constructor(loader, node):
@@ -101,27 +101,27 @@ def _dict_constructor(loader, node):
     return OrderedDict(loader.construct_pairs(node))
 
 
-def yaml_parse(yamlstr):
-    """Parse a yaml string"""
-    try:
-        # PyYAML doesn't support json as well as it should, so if the input
-        # is actually just json it is better to parse it with the standard
-        # json parser.
-        return json.loads(yamlstr, object_pairs_hook=OrderedDict)
-    except ValueError:
-        yaml = ruamel.yaml.YAML(typ="safe", pure=True)
-        yaml.Constructor.add_constructor(
-            ruamel.yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-            _dict_constructor,
-        )
-        yaml.Constructor.add_multi_constructor(
-            "!", intrinsics_multi_constructor
-        )
-        _add_yaml_1_1_boolean_resolvers(yaml.Resolver)
+# def yaml_parse(yamlstr):
+#     """Parse a yaml string"""
+#     try:
+#         # PyYAML doesn't support json as well as it should, so if the input
+#         # is actually just json it is better to parse it with the standard
+#         # json parser.
+#         return json.loads(yamlstr, object_pairs_hook=OrderedDict)
+#     except ValueError:
+#         yaml = ruamel.yaml.YAML(typ="safe", pure=True)
+#         yaml.Constructor.add_constructor(
+#             ruamel.yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+#             _dict_constructor,
+#         )
+#         yaml.Constructor.add_multi_constructor(
+#             "!", intrinsics_multi_constructor
+#         )
+#         _add_yaml_1_1_boolean_resolvers(yaml.Resolver)
+#
+#         return yaml.load(yamlstr)
 
-        return yaml.load(yamlstr)
 
-
-class FlattenAliasRepresenter(ruamel.yaml.representer.SafeRepresenter):
-    def ignore_aliases(self, data):
-        return True
+# class FlattenAliasRepresenter(ruamel.yaml.representer.SafeRepresenter):
+#     def ignore_aliases(self, data):
+#         return True

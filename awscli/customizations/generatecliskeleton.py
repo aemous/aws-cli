@@ -16,11 +16,11 @@ import sys
 from botocore import xform_name
 from botocore.stub import Stubber
 from botocore.utils import ArgumentGenerator
-from ruamel.yaml import YAML
+# from ruamel.yaml import YAML
 
 from awscli.clidriver import CLIOperationCaller
 from awscli.customizations.arguments import OverrideRequiredArgsArgument
-from awscli.customizations.utils import get_shape_doc_overview
+# from awscli.customizations.utils import get_shape_doc_overview
 from awscli.utils import json_encoder
 
 
@@ -101,16 +101,16 @@ class GenerateCliSkeletonArgument(OverrideRequiredArgsArgument):
             self, '_generate_%s_skeleton' % arg_value.replace('-', '_')
         )(call_parameters=call_parameters, parsed_globals=parsed_globals)
 
-    def _generate_yaml_input_skeleton(self, **kwargs):
-        input_shape = self._operation_model.input_shape
-        yaml = YAML()
-        yaml.representer.add_representer(_Bytes, _Bytes.represent)
-        skeleton = yaml.map()
-        if input_shape is not None:
-            argument_generator = YAMLArgumentGenerator()
-            skeleton = argument_generator.generate_skeleton(input_shape)
-        yaml.dump(skeleton, sys.stdout)
-        return 0
+    # def _generate_yaml_input_skeleton(self, **kwargs):
+    #     input_shape = self._operation_model.input_shape
+    #     yaml = YAML()
+    #     yaml.representer.add_representer(_Bytes, _Bytes.represent)
+    #     skeleton = yaml.map()
+    #     if input_shape is not None:
+    #         argument_generator = YAMLArgumentGenerator()
+    #         skeleton = argument_generator.generate_skeleton(input_shape)
+    #     yaml.dump(skeleton, sys.stdout)
+    #     return 0
 
     def _generate_input_skeleton(self, **kwargs):
         outfile = sys.stdout
@@ -164,62 +164,62 @@ class _Bytes:
         return dumper.represent_scalar('tag:yaml.org,2002:binary', '')
 
 
-class YAMLArgumentGenerator(ArgumentGenerator):
-    def __init__(self, use_member_names=False, yaml=None):
-        super(YAMLArgumentGenerator, self).__init__(
-            use_member_names=use_member_names
-        )
-        self._yaml = yaml
-        if self._yaml is None:
-            self._yaml = YAML()
-
-    def _generate_skeleton(self, shape, stack, name=''):
-        # YAML supports binary, so add in boilerplate for that instead of
-        # putting in None. Here were' using a custom type so that we can ensure
-        # we serialize it correctly on python 2 and to make the
-        # serialization output more usable on python 3.
-        if shape.type_name == 'blob':
-            return _Bytes()
-        return super(YAMLArgumentGenerator, self)._generate_skeleton(
-            shape, stack, name
-        )
-
-    def _generate_type_structure(self, shape, stack):
-        if stack.count(shape.name) > 1:
-            return self._yaml.map()
-        skeleton = self._yaml.map()
-        for member_name, member_shape in shape.members.items():
-            skeleton[member_name] = self._generate_skeleton(
-                member_shape, stack, name=member_name
-            )
-            is_required = member_name in shape.required_members
-            self._add_member_comments(
-                skeleton, member_name, member_shape, is_required
-            )
-        return skeleton
-
-    def _add_member_comments(
-        self, skeleton, member_name, member_shape, is_required
-    ):
-        comment_components = []
-        if is_required:
-            comment_components.append('[REQUIRED]')
-        comment_components.append(get_shape_doc_overview(member_shape))
-        if getattr(member_shape, 'enum', None):
-            comment_components.append(
-                self._get_enums_comment_content(member_shape.enum)
-            )
-        comment = ' '.join(comment_components)
-        if comment and not comment.isspace():
-            skeleton.yaml_add_eol_comment('# ' + comment, member_name)
-
-    def _get_enums_comment_content(self, enums):
-        return 'Valid values are: %s.' % ', '.join(enums)
-
-    def _generate_type_map(self, shape, stack):
-        # YAML has support for ordered maps, so don't use ordereddicts
-        # because that isn't necessary and it makes the output harder to
-        # understand and read.
-        return dict(
-            super(YAMLArgumentGenerator, self)._generate_type_map(shape, stack)
-        )
+# class YAMLArgumentGenerator(ArgumentGenerator):
+#     def __init__(self, use_member_names=False, yaml=None):
+#         super(YAMLArgumentGenerator, self).__init__(
+#             use_member_names=use_member_names
+#         )
+#         self._yaml = yaml
+#         if self._yaml is None:
+#             self._yaml = YAML()
+#
+#     def _generate_skeleton(self, shape, stack, name=''):
+#         # YAML supports binary, so add in boilerplate for that instead of
+#         # putting in None. Here were' using a custom type so that we can ensure
+#         # we serialize it correctly on python 2 and to make the
+#         # serialization output more usable on python 3.
+#         if shape.type_name == 'blob':
+#             return _Bytes()
+#         return super(YAMLArgumentGenerator, self)._generate_skeleton(
+#             shape, stack, name
+#         )
+#
+#     def _generate_type_structure(self, shape, stack):
+#         if stack.count(shape.name) > 1:
+#             return self._yaml.map()
+#         skeleton = self._yaml.map()
+#         for member_name, member_shape in shape.members.items():
+#             skeleton[member_name] = self._generate_skeleton(
+#                 member_shape, stack, name=member_name
+#             )
+#             is_required = member_name in shape.required_members
+#             self._add_member_comments(
+#                 skeleton, member_name, member_shape, is_required
+#             )
+#         return skeleton
+#
+#     def _add_member_comments(
+#         self, skeleton, member_name, member_shape, is_required
+#     ):
+#         comment_components = []
+#         if is_required:
+#             comment_components.append('[REQUIRED]')
+#         comment_components.append(get_shape_doc_overview(member_shape))
+#         if getattr(member_shape, 'enum', None):
+#             comment_components.append(
+#                 self._get_enums_comment_content(member_shape.enum)
+#             )
+#         comment = ' '.join(comment_components)
+#         if comment and not comment.isspace():
+#             skeleton.yaml_add_eol_comment('# ' + comment, member_name)
+#
+#     def _get_enums_comment_content(self, enums):
+#         return 'Valid values are: %s.' % ', '.join(enums)
+#
+#     def _generate_type_map(self, shape, stack):
+#         # YAML has support for ordered maps, so don't use ordereddicts
+#         # because that isn't necessary and it makes the output harder to
+#         # understand and read.
+#         return dict(
+#             super(YAMLArgumentGenerator, self)._generate_type_map(shape, stack)
+#         )

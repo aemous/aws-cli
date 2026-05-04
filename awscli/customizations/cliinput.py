@@ -12,8 +12,8 @@
 # language governing permissions and limitations under the License.
 import json
 
-from ruamel.yaml import YAML
-from ruamel.yaml.error import YAMLError
+# from ruamel.yaml import YAML
+# from ruamel.yaml.error import YAMLError
 
 from awscli.argprocess import ParamError, ParamSyntaxError
 from awscli.customizations.arguments import OverrideRequiredArgsArgument
@@ -22,15 +22,15 @@ from awscli.paramfile import LOCAL_PREFIX_MAP, get_paramfile
 
 def register_cli_input_args(cli):
     cli.register('building-argument-table', add_cli_input_json)
-    cli.register('building-argument-table', add_cli_input_yaml)
+    # cli.register('building-argument-table', add_cli_input_yaml)
 
 
 def add_cli_input_json(session, argument_table, **kwargs):
     _add_cli_input_argument(session, argument_table, CliInputJSONArgument)
 
 
-def add_cli_input_yaml(session, argument_table, **kwargs):
-    _add_cli_input_argument(session, argument_table, CliInputYAMLArgument)
+# def add_cli_input_yaml(session, argument_table, **kwargs):
+#     _add_cli_input_argument(session, argument_table, CliInputYAMLArgument)
 
 
 def _add_cli_input_argument(session, argument_table, argument_cls):
@@ -133,24 +133,24 @@ class CliInputJSONArgument(CliInputArgument):
             raise ParamError(self.name, "Invalid JSON received.")
 
 
-class CliInputYAMLArgument(CliInputArgument):
-    ARG_DATA = {
-        'name': 'cli-input-yaml',
-        'group_name': 'cli_input',
-        'help_text': (
-            'Reads arguments from the YAML string provided. The YAML string '
-            'follows the format provided by '
-            '``--generate-cli-skeleton yaml-input``. '
-            'If other arguments are provided on the command line, those '
-            'values will override the YAML-provided values. This may not be '
-            'specified along with ``--cli-input-json``.'
-        ),
-    }
-
-    def _load_parameters(self, arg_value):
-        yaml = YAML(typ='safe', pure=True)
-
-        try:
-            return yaml.load(arg_value)
-        except YAMLError:
-            raise ParamError(self.name, "Invalid YAML received.")
+# class CliInputYAMLArgument(CliInputArgument):
+#     ARG_DATA = {
+#         'name': 'cli-input-yaml',
+#         'group_name': 'cli_input',
+#         'help_text': (
+#             'Reads arguments from the YAML string provided. The YAML string '
+#             'follows the format provided by '
+#             '``--generate-cli-skeleton yaml-input``. '
+#             'If other arguments are provided on the command line, those '
+#             'values will override the YAML-provided values. This may not be '
+#             'specified along with ``--cli-input-json``.'
+#         ),
+#     }
+#
+#     def _load_parameters(self, arg_value):
+#         yaml = YAML(typ='safe', pure=True)
+#
+#         try:
+#             return yaml.load(arg_value)
+#         except YAMLError:
+#             raise ParamError(self.name, "Invalid YAML received.")

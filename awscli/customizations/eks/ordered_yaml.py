@@ -10,7 +10,7 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-import ruamel.yaml
+# import ruamel.yaml
 from botocore.compat import OrderedDict
 
 from awscli.utils import dump_yaml_to_str
@@ -21,40 +21,40 @@ def _ordered_constructor(loader, node):
     return OrderedDict(loader.construct_pairs(node))
 
 
-def _ordered_representer(dumper, data):
-    return dumper.represent_mapping(
-        ruamel.yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items()
-    )
+# def _ordered_representer(dumper, data):
+#     return dumper.represent_mapping(
+#         ruamel.yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items()
+#     )
 
 
-def ordered_yaml_load(stream):
-    """Load an OrderedDict object from a yaml stream."""
-    yaml = ruamel.yaml.YAML(typ="safe", pure=True)
-    yaml.Constructor.add_constructor(
-        ruamel.yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-        _ordered_constructor,
-    )
+# def ordered_yaml_load(stream):
+#     """Load an OrderedDict object from a yaml stream."""
+#     yaml = ruamel.yaml.YAML(typ="safe", pure=True)
+#     yaml.Constructor.add_constructor(
+#         ruamel.yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+#         _ordered_constructor,
+#     )
+#
+#     return yaml.load(stream)
 
-    return yaml.load(stream)
 
-
-def ordered_yaml_dump(to_dump, stream=None):
-    """
-    Dump an OrderedDict object to yaml.
-
-    :param to_dump: The OrderedDict to dump
-    :type to_dump: OrderedDict
-
-    :param stream: The file to dump to
-    If not given or if None, only return the value
-    :type stream: file
-    """
-    yaml = ruamel.yaml.YAML(typ="safe", pure=True)
-    yaml.default_flow_style = False
-    yaml.width = float('inf')
-    yaml.Representer.add_representer(OrderedDict, _ordered_representer)
-
-    if stream is None:
-        return dump_yaml_to_str(yaml, to_dump)
-
-    yaml.dump(to_dump, stream)
+# def ordered_yaml_dump(to_dump, stream=None):
+#     """
+#     Dump an OrderedDict object to yaml.
+#
+#     :param to_dump: The OrderedDict to dump
+#     :type to_dump: OrderedDict
+#
+#     :param stream: The file to dump to
+#     If not given or if None, only return the value
+#     :type stream: file
+#     """
+#     yaml = ruamel.yaml.YAML(typ="safe", pure=True)
+#     yaml.default_flow_style = False
+#     yaml.width = float('inf')
+#     yaml.Representer.add_representer(OrderedDict, _ordered_representer)
+#
+#     if stream is None:
+#         return dump_yaml_to_str(yaml, to_dump)
+#
+#     yaml.dump(to_dump, stream)

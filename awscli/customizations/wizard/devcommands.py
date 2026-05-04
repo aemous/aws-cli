@@ -10,29 +10,29 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-from ruamel.yaml import YAML
+# from ruamel.yaml import YAML
 
 from awscli.customizations.commands import BasicCommand
 
 
-def register_dev_commands(event_handlers):
-    event_handlers.register(
-        'building-command-table.cli-dev', WizardDev.add_command
-    )
+# def register_dev_commands(event_handlers):
+#     event_handlers.register(
+#         'building-command-table.cli-dev', WizardDev.add_command
+#     )
 
 
-def create_default_wizard_dev_runner(session):
-    return WizardDevRunner(
-        wizard_loader=WizardLoader(),
-        session=session,
-    )
+# def create_default_wizard_dev_runner(session):
+#     return WizardDevRunner(
+#         wizard_loader=WizardLoader(),
+#         session=session,
+#     )
 
 
-class WizardLoader:
-    def load(self, contents):
-        yaml = YAML(typ="rt")
-        data = yaml.load(contents)
-        return data
+# class WizardLoader:
+    # def load(self, contents):
+    #     yaml = YAML(typ="rt")
+    #     data = yaml.load(contents)
+    #     return data
 
 
 class WizardDevRunner:
@@ -68,8 +68,8 @@ class WizardDev(BasicCommand):
 
     def __init__(self, session, dev_runner=None):
         super().__init__(session)
-        if dev_runner is None:
-            dev_runner = create_default_wizard_dev_runner(session)
+        # if dev_runner is None:
+            # dev_runner = create_default_wizard_dev_runner(session)
         self._dev_runner = dev_runner
 
     def _run_main(self, args, parsed_globals):

@@ -33,12 +33,12 @@ classifiers = [
 dependencies = [
     "colorama>=0.2.5,<0.4.7",
     "docutils>=0.10,<0.20",
-    "ruamel_yaml>=0.15.0,<=0.19.1",
+#    "ruamel_yaml>=0.15.0,<=0.19.1",
     # ruamel_yaml only requires ruamel_yaml_clib for Python versions
     # less than or equal to Python 3.10. In order to ensure we have
     # a consistent dependency closure across all Python versions,
     # we explicitly include ruamel_yaml_clib as a dependency.
-    "ruamel_yaml_clib>=0.2.0,<=0.2.15",
+#    "ruamel_yaml_clib>=0.2.0,<=0.2.15",
     "prompt-toolkit>=3.0.24,<3.0.52",
     "distro>=1.5.0,<1.9.0",
     "awscrt==0.32.2",

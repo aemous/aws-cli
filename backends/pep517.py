@@ -110,7 +110,12 @@ def get_requires_for_build_wheel(config_settings=None):
     with open(ROOT_DIR / "pyproject.toml") as f:
         data = f.read()
     raw_dependencies = dependency_block_re.findall(data)[0]
-    dependencies = extract_dependencies_re.findall(raw_dependencies)
+    # Filter out commented lines before extracting dependencies
+    active_lines = [
+        line for line in raw_dependencies.splitlines()
+        if not line.strip().startswith('#')
+    ]
+    dependencies = extract_dependencies_re.findall('\n'.join(active_lines))
     return dependencies + requires
 
 

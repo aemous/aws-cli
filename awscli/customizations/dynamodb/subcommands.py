@@ -15,12 +15,12 @@ import sys
 from base64 import b64decode
 from decimal import Decimal
 
-from ruamel.yaml import YAML
+# from ruamel.yaml import YAML
 
 import awscli.customizations.dynamodb.params as parameters
 from awscli.customizations.commands import BasicCommand, CustomArgument
 from awscli.customizations.dynamodb.extractor import AttributeExtractor
-from awscli.customizations.dynamodb.formatter import DynamoYAMLDumper
+# from awscli.customizations.dynamodb.formatter import DynamoYAMLDumper
 from awscli.customizations.dynamodb.transform import (
     ParameterTransformer,
     TypeDeserializer,
@@ -28,7 +28,7 @@ from awscli.customizations.dynamodb.transform import (
 )
 from awscli.customizations.exceptions import ParamValidationError
 from awscli.customizations.paginate import ensure_paging_params_not_set
-from awscli.formatter import YAMLFormatter
+# from awscli.formatter import YAMLFormatter
 from awscli.utils import OutputStreamFactory
 
 from .types import Binary
@@ -94,19 +94,19 @@ class DDBCommand(BasicCommand):
         self._deserialize(operation_name, response)
         return response
 
-    def _dump_yaml(self, operation_name, data, parsed_globals):
-        # TODO: In the future, we should support yaml-stream. However, it
-        #  would require a larger refactoring. Right now we always build
-        #  the full result when paginating prior to sending it to the
-        #  formatter. We need to instead pass the page iterator and
-        #  deserialize in the formatter. We cannot necessarily just
-        #  convert these to client handlers because the DDB types we
-        #  introduce do not play nicely with the pagination interfaces.
-        #  For example, botocore cannot serialize our Binary types into
-        #  a resume token when --max-items gets set.
-        formatter = YAMLFormatter(parsed_globals, DynamoYAMLDumper())
-        with self._output_stream_factory.get_output_stream() as stream:
-            formatter(operation_name, data, stream)
+    # def _dump_yaml(self, operation_name, data, parsed_globals):
+    #     # TODO: In the future, we should support yaml-stream. However, it
+    #     #  would require a larger refactoring. Right now we always build
+    #     #  the full result when paginating prior to sending it to the
+    #     #  formatter. We need to instead pass the page iterator and
+    #     #  deserialize in the formatter. We cannot necessarily just
+    #     #  convert these to client handlers because the DDB types we
+    #     #  introduce do not play nicely with the pagination interfaces.
+    #     #  For example, botocore cannot serialize our Binary types into
+    #     #  a resume token when --max-items gets set.
+    #     formatter = YAMLFormatter(parsed_globals, DynamoYAMLDumper())
+    #     with self._output_stream_factory.get_output_stream() as stream:
+    #         formatter(operation_name, data, stream)
 
     def _add_expression_args(
         self, expression_name, expression, args, substitution_count=0
@@ -212,7 +212,7 @@ class SelectCommand(PaginatedDDBCommand):
             ensure_paging_params_not_set(parsed_args, {})
         client_args = self._get_client_args(parsed_args)
         response = self._make_api_call(operation, client_args, should_paginate)
-        self._dump_yaml(operation, response, parsed_globals)
+        # self._dump_yaml(operation, response, parsed_globals)
 
     def _get_client_args(self, parsed_args):
         client_args = super(SelectCommand, self)._get_client_args(parsed_args)
@@ -277,14 +277,14 @@ class PutCommand(DDBCommand):
 
     def _run_main(self, parsed_args, parsed_globals):
         super(PutCommand, self)._run_main(parsed_args, parsed_globals)
-        self._yaml = YAML(typ='safe')
-        self._yaml.constructor.add_constructor(
-            'tag:yaml.org,2002:binary', self._load_binary
-        )
-        self._yaml.constructor.add_constructor(
-            'tag:yaml.org,2002:float', self._load_number
-        )
-        self._put(parsed_args)
+        # self._yaml = YAML(typ='safe')
+        # self._yaml.constructor.add_constructor(
+        #     'tag:yaml.org,2002:binary', self._load_binary
+        # )
+        # self._yaml.constructor.add_constructor(
+        #     'tag:yaml.org,2002:float', self._load_number
+        # )
+        # self._put(parsed_args)
         return 0
 
     def _load_binary(self, loader, node):
@@ -293,19 +293,19 @@ class PutCommand(DDBCommand):
     def _load_number(self, loader, node):
         return Decimal(node.value)
 
-    def _put(self, parsed_args):
-        items = self._get_items(parsed_args)
-
-        # batch write does not support condition expressions, so if we use
-        # that then we just have to call put_item for each item.
-        if len(items) > 1 and parsed_args.condition is None:
-            self._batch_write(items, parsed_args)
-        else:
-            if len(items) > 1:
-                raise ParamValidationError(
-                    '--condition is not supported for multiple items'
-                )
-            self._put_item(items, parsed_args)
+    # def _put(self, parsed_args):
+    #     # items = self._get_items(parsed_args)
+    #
+    #     # batch write does not support condition expressions, so if we use
+    #     # that then we just have to call put_item for each item.
+    #     if len(items) > 1 and parsed_args.condition is None:
+    #         self._batch_write(items, parsed_args)
+    #     else:
+    #         if len(items) > 1:
+    #             raise ParamValidationError(
+    #                 '--condition is not supported for multiple items'
+    #             )
+    #         self._put_item(items, parsed_args)
 
     def _put_item(self, items, parsed_args):
         client_args = self._get_base_args(parsed_args)
@@ -334,14 +334,14 @@ class PutCommand(DDBCommand):
             if unprocessed_items is not None:
                 put_requests.extend(unprocessed_items)
 
-    def _get_items(self, parsed_args):
-        if parsed_args.items == '-':
-            items = self._yaml.load(sys.stdin)
-        else:
-            items = self._yaml.load(parsed_args.items)
-        if not isinstance(items, list):
-            items = [items]
-        return items
+    # def _get_items(self, parsed_args):
+    #     # if parsed_args.items == '-':
+    #     #     items = self._yaml.load(sys.stdin)
+    #     # else:
+    #     #     items = self._yaml.load(parsed_args.items)
+    #     if not isinstance(items, list):
+    #         items = [items]
+    #     return items
 
     def _get_base_args(self, parsed_args):
         client_args = {'ReturnConsumedCapacity': 'NONE'}

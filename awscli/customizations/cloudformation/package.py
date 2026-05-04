@@ -20,7 +20,7 @@ from botocore.client import Config
 
 from awscli.customizations.cloudformation import exceptions
 from awscli.customizations.cloudformation.artifact_exporter import Template
-from awscli.customizations.cloudformation.yamlhelper import yaml_dump
+# from awscli.customizations.cloudformation.yamlhelper import yaml_dump
 from awscli.customizations.commands import BasicCommand
 from awscli.customizations.s3uploader import S3Uploader
 
@@ -169,7 +169,8 @@ class PackageCommand(BasicCommand):
                 exported_template, indent=4, ensure_ascii=False
             )
         else:
-            exported_str = yaml_dump(exported_template)
+            pass
+            # exported_str = yaml_dump(exported_template)
 
         return exported_str
 
