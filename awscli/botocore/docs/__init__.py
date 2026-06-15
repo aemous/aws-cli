@@ -12,8 +12,6 @@
 # language governing permissions and limitations under the License.
 import os
 
-from botocore.docs.service import ServiceDocumenter
-
 
 def generate_docs(root_dir, session):
     """Generates the reference documentation for botocore
@@ -31,6 +29,8 @@ def generate_docs(root_dir, session):
         os.makedirs(services_dir_path)
 
     # Generate reference docs and write them out.
+    from botocore.docs.service import ServiceDocumenter
+
     for service_name in session.get_available_services():
         docs = ServiceDocumenter(
             service_name, session, services_dir_path

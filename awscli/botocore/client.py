@@ -37,7 +37,7 @@ from botocore.discovery import (
     EndpointDiscoveryManager,
     block_endpoint_discovery_required_operations,
 )
-from botocore.docs.docstring import ClientMethodDocstring, PaginatorDocstring
+
 from botocore.exceptions import (
     ClientError,  # noqa
     DataNotFoundError,
@@ -442,18 +442,6 @@ class ClientCreator:
             return self._make_api_call(operation_name, kwargs)
 
         _api_call.__name__ = str(py_operation_name)
-
-        # Add the docstring to the client method
-        operation_model = service_model.operation_model(operation_name)
-        docstring = ClientMethodDocstring(
-            operation_model=operation_model,
-            method_name=operation_name,
-            event_emitter=self._event_emitter,
-            method_description=operation_model.documentation,
-            example_prefix=f'response = client.{py_operation_name}',
-            include_signature=False,
-        )
-        _api_call.__doc__ = docstring
         return _api_call
 
     def _evaluate_client_specific_token(self, signing_name):
@@ -1087,6 +1075,8 @@ class BaseClient:
                 actual_operation_name
             ]
             # Add the docstring for the paginate method.
+            from botocore.docs.docstring import PaginatorDocstring
+
             paginate.__doc__ = PaginatorDocstring(
                 paginator_name=actual_operation_name,
                 event_emitter=self.meta.events,

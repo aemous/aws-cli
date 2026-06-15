@@ -16,7 +16,6 @@ from functools import partial
 
 import jmespath
 from botocore.context import with_current_context
-from botocore.docs.docstring import WaiterDocstring
 from botocore.useragent import register_feature_id
 from botocore.utils import get_service_module_name
 
@@ -55,6 +54,8 @@ def create_waiter_with_client(waiter_name, waiter_model, client):
     # method.
     def wait(self, **kwargs):
         Waiter.wait(self, **kwargs)
+
+    from botocore.docs.docstring import WaiterDocstring
 
     wait.__doc__ = WaiterDocstring(
         waiter_name=waiter_name,
