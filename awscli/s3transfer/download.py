@@ -633,6 +633,7 @@ class GetObjectTask(Task):
         last_exception = None
         for i in range(max_attempts):
             try:
+                import awscli.perf_timer as T
                 current_index = start_index
                 response = client.get_object(
                     Bucket=bucket, Key=key, **extra_args
@@ -674,13 +675,14 @@ class GetObjectTask(Task):
                     # or error somewhere else, stop trying to submit more
                     # data to be written and break out of the download.
                     if not self._transfer_coordinator.done():
-                        part_length += len(chunk)
-                        self._handle_io(
-                            download_output_manager,
-                            fileobj,
-                            chunk,
-                            current_index,
-                        )
+                        with T.timer('GetObjectTask.handle_io'):
+                            part_length += len(chunk)
+                            self._handle_io(
+                                download_output_manager,
+                                fileobj,
+                                chunk,
+                                current_index,
+                            )
                         current_index += len(chunk)
                     else:
                         return
@@ -766,8 +768,10 @@ class IOWriteTask(Task):
         :param data: The data to write
         :param offset: The offset to write the data to.
         """
-        fileobj.seek(offset)
-        fileobj.write(data)
+        import awscli.perf_timer as T
+        with T.timer('IOWriteTask'):
+            fileobj.seek(offset)
+            fileobj.write(data)
 
 
 class IOStreamingWriteTask(Task):
@@ -796,8 +800,10 @@ class IORenameFileTask(Task):
     """
 
     def _main(self, fileobj, final_filename, osutil):
-        fileobj.close()
-        osutil.rename_file(fileobj.name, final_filename)
+        import awscli.perf_timer as T
+        with T.timer('IORenameFileTask'):
+            fileobj.close()
+            osutil.rename_file(fileobj.name, final_filename)
 
 
 class IOCloseTask(Task):
@@ -852,7 +858,9 @@ class DownloadChunkIterator:
         return self
 
     def __next__(self):
-        chunk = self._body.read(self._chunksize)
+        import awscli.perf_timer as T
+        with T.timer('GetObjectTask.chunk_read'):
+            chunk = self._body.read(self._chunksize)
         self._num_reads += 1
         if chunk:
             return chunk

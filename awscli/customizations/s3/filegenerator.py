@@ -391,6 +391,7 @@ class FileGenerator:
             return s3_path, {'Size': None, 'LastModified': None}
         bucket, key = find_bucket_key(s3_path)
         try:
+            import awscli.perf_timer as T
             params = {'Bucket': bucket, 'Key': key}
             params.update(self.request_parameters.get('HeadObject', {}))
             if (
@@ -398,7 +399,8 @@ class FileGenerator:
                 == 'when_supported'
             ):
                 params.setdefault('ChecksumMode', 'ENABLED')
-            response = self._client.head_object(**params)
+            with T.timer('FileGenerator.head_object'):
+                response = self._client.head_object(**params)
         except ClientError as e:
             # We want to try to give a more helpful error message.
             # This is what the customer is going to see so we want to
